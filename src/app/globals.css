@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/* Paleta del aplicativo JMC */
+:root {
+  --acento: #1e40af;
+  --acento-hover: #1e3a8a;
+  --acento-suave: #dbeafe;
+  --texto: #1e293b;
+  --texto-suave: #64748b;
+  --fondo: #f8fafc;
+  --superficie: #ffffff;
+  --borde: #e2e8f0;
+  --exito: #16a34a;
+  --error: #dc2626;
+  --alerta: #f59e0b;
+}
+
+@theme inline {
+  --color-acento: var(--acento);
+  --color-acento-hover: var(--acento-hover);
+  --color-acento-suave: var(--acento-suave);
+  --color-texto: var(--texto);
+  --color-texto-suave: var(--texto-suave);
+  --color-fondo: var(--fondo);
+  --color-superficie: var(--superficie);
+  --color-borde: var(--borde);
+  --color-exito: var(--exito);
+  --color-error: var(--error);
+  --color-alerta: var(--alerta);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --animate-aparecer: aparecer 150ms ease-out;
+  --animate-subir: subir 200ms ease-out;
+  --animate-deslizar-derecha: deslizar-derecha 250ms ease-out;
+  --animate-deslizar-izquierda: deslizar-izquierda 250ms ease-out;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes subir {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes deslizar-derecha {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes deslizar-izquierda {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--font-sans);
+}
+
+/* Bordes por defecto con el color de la paleta */
+@layer base {
+  *,
+  ::after,
+  ::before {
+    border-color: var(--borde);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--acento);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
