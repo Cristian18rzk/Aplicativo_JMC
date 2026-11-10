@@ -116,7 +116,7 @@ En esa misma pantalla se puede descargar una plantilla de ejemplo. Durante el ca
 
 1. Suba el repositorio a GitHub e impórtelo en Vercel. La región `gru1` (São Paulo) ya está fijada en `vercel.json`.
 2. Configure en Vercel las variables de `.env.example`.
-3. El workflow `.github/workflows/ci.yml` ejecuta lint y verificación de tipos en cada push y PR.
+3. Antes de subir cambios, ejecute `npm run lint` y `npm run type-check`. El build de Vercel también falla si hay errores de tipos.
 
 ## Notas técnicas
 
