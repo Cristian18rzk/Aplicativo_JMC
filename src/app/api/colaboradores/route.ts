@@ -1,6 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import * as colaboradoresDb from "@/lib/airtable/colaboradores";
 import { leerJson, leerPaginacion, manejarErrorApi } from "@/lib/api";
+import { sincronizarCuentaColaborador, verificarEmailDisponible } from "@/lib/auth/cuentas";
 import { requerirAdmin } from "@/lib/auth/middleware";
 import { crearColaboradorSchema } from "@/lib/validators/colaborador";
 import { AREAS, ESTADOS_COLABORADOR, type Area, type EstadoColaborador } from "@/types/colaborador";
@@ -32,7 +33,15 @@ export async function POST(request: NextRequest) {
   try {
     await requerirAdmin(request);
     const datos = crearColaboradorSchema.parse(await leerJson(request));
+    await verificarEmailDisponible(datos.email);
     const colaborador = await colaboradoresDb.create(datos);
+
+    // Cuenta de acceso (sin contraseña: el colaborador la crea en /auth/forgot-password)
+    after(() =>
+      sincronizarCuentaColaborador(colaborador).catch((e: Error) =>
+        console.error("[cuentas] No fue posible crear la cuenta del colaborador:", e.message),
+      ),
+    );
     return NextResponse.json(colaborador, { status: 201 });
   } catch (error) {
     return manejarErrorApi(error);

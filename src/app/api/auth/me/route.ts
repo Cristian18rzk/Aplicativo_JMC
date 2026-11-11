@@ -1,34 +1,46 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getById } from "@/lib/airtable/colaboradores";
-import { ErrorApi, manejarErrorApi } from "@/lib/api";
-import { requerirSesion } from "@/lib/auth/middleware";
-import { NOMBRE_COOKIE_SESION, opcionesCookieSesion } from "@/lib/auth/session";
+import { NextResponse } from "next/server";
+import * as colaboradoresDb from "@/lib/airtable/colaboradores";
+import { getUsuarioPorId } from "@/lib/airtable/usuarios";
+import { manejarErrorApi } from "@/lib/api";
+import { auth } from "@/lib/auth/config";
+import { COOKIE_REFRESH, COOKIE_SESION, OPCIONES_COOKIE } from "@/lib/auth/constantes";
+import { cuentaHabilitada } from "@/lib/auth/sesiones";
 import type { AuthUser } from "@/types/auth";
 
-/** GET /api/auth/me — Devuelve el usuario actual a partir del JWT, validando que siga activo. */
-export async function GET(request: NextRequest) {
+function sinSesion(mensaje: string) {
+  const respuesta = NextResponse.json({ error: mensaje }, { status: 401 });
+  respuesta.cookies.set(COOKIE_SESION, "", { ...OPCIONES_COOKIE, maxAge: 0 });
+  respuesta.cookies.set(COOKIE_REFRESH, "", { ...OPCIONES_COOKIE, maxAge: 0 });
+  return respuesta;
+}
+
+/**
+ * GET /api/auth/me — Usuario actual. Además de validar el JWT, confirma contra Airtable que la cuenta
+ * siga activa, que el rol no haya cambiado y que la contraseña no se haya cambiado después del login.
+ */
+export async function GET() {
   try {
-    const usuarioToken = await requerirSesion(request);
-    const colaborador = await getById(usuarioToken.id);
+    const sesion = await auth();
+    if (!sesion?.user?.id) return sinSesion("Sesión no válida o expirada");
 
-    if (!colaborador || colaborador.estado !== "Activo") {
-      const respuesta = NextResponse.json({ error: "Usuario inactivo" }, { status: 401 });
-      respuesta.cookies.set(NOMBRE_COOKIE_SESION, "", opcionesCookieSesion(0));
-      return respuesta;
+    const usuario = await getUsuarioPorId(sesion.user.id);
+    if (!usuario || !(await cuentaHabilitada(usuario, sesion.authTime))) {
+      return sinSesion("Tu sesión ya no es válida. Inicia sesión nuevamente.");
+    }
+    if (usuario.role !== sesion.user.role) {
+      return sinSesion("Tus permisos cambiaron. Inicia sesión nuevamente.");
     }
 
-    if (colaborador.rol !== usuarioToken.rol) {
-      // El rol cambió en Airtable: obligar a iniciar sesión de nuevo
-      throw new ErrorApi(401, "Sus permisos cambiaron. Inicie sesión nuevamente.");
-    }
-
-    const usuario: AuthUser = {
-      id: colaborador.id,
-      cedula: colaborador.cedula,
-      nombre: `${colaborador.nombres} ${colaborador.apellidos}`.trim(),
-      rol: colaborador.rol,
+    const colaborador = usuario.colaboradorId ? await colaboradoresDb.getById(usuario.colaboradorId) : null;
+    const respuesta: AuthUser = {
+      usuarioId: usuario.id,
+      id: usuario.colaboradorId,
+      rol: usuario.role,
+      email: usuario.email,
+      nombre: colaborador ? `${colaborador.nombres} ${colaborador.apellidos}`.trim() : usuario.nombre || usuario.email,
+      cedula: colaborador?.cedula ?? "",
     };
-    return NextResponse.json({ usuario });
+    return NextResponse.json({ usuario: respuesta }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return manejarErrorApi(error);
   }

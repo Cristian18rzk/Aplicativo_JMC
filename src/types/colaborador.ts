@@ -53,12 +53,6 @@ export interface Colaborador {
   telefono: string;
 }
 
-/** Registro completo de Airtable, incluyendo campos de verificación. Solo para uso en servidor. */
-export interface ColaboradorConCodigo extends Colaborador {
-  codigo_verificacion: string;
-  codigo_expira: string; // ISO 8601
-}
-
 export type ColaboradorInput = Omit<Colaborador, "id">;
 
 export interface FiltrosColaboradores {

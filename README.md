@@ -4,11 +4,11 @@ Sistema web para gestionar colaboradores, desprendibles de nómina y certificado
 
 - **Admin:** CRUD de colaboradores, desprendibles (individual y cargue masivo desde Excel/CSV), certificados.
 - **Colaborador:** consulta y descarga en PDF de sus propios desprendibles y certificados.
-- **Acceso:** número de cédula + código de verificación de 6 dígitos. La sesión es un JWT en una cookie httpOnly que dura 8 horas.
+- **Acceso:** correo + contraseña (Auth.js v5). Access token de 15 minutos y refresh token rotativo de 7 días, ambos en cookies HttpOnly. Ver [Autenticación](#autenticación).
 
 ## Stack
 
-Next.js 16 (App Router) · React 19 · TypeScript strict · Tailwind CSS v4 · Airtable · jose (JWT) · @react-pdf/renderer · zod · TanStack Query v5 · xlsx · lucide-react
+Next.js 16 (App Router) · React 19 · TypeScript strict · Tailwind CSS v4 · Airtable · Auth.js (NextAuth v5) · bcryptjs · @react-pdf/renderer · zod · React Hook Form · Framer Motion · TanStack Query v5 · xlsx · lucide-react
 
 ## Puesta en marcha
 
@@ -24,13 +24,37 @@ npm run dev                  # http://localhost:3000
 | `npm run build`      | Build de producción                        |
 | `npm run lint`       | ESLint                                     |
 | `npm run type-check` | Genera los tipos de rutas y ejecuta `tsc`  |
+| `npm run auth:setup` | Crea las tablas de autenticación en Airtable |
+| `npm run auth:seed`  | Crea el administrador inicial              |
+| `npm run auth:migrar` | Crea cuentas para colaboradores existentes |
 
-### Código de verificación
+## Autenticación
 
-- Si `RESEND_API_KEY` está configurada, el código se envía al `email` del colaborador.
-- En desarrollo sin proveedor de correo, el código se muestra en la pantalla de login.
-- En producción **debe** configurar `RESEND_API_KEY` y `EMAIL_REMITENTE`, con un dominio verificado en Resend.
-- El código vence en 10 minutos y se invalida tras 5 intentos fallidos. Se guarda como hash SHA-256, nunca en texto plano.
+### Primer arranque
+
+1. `npm run auth:setup` crea las tablas `Usuarios`, `refresh_tokens` y `auth_logs`. Es idempotente y el token de Airtable necesita además `schema.bases:read` y `schema.bases:write`.
+2. `npm run auth:seed -- --email=admin@empresa.com --nombre="Nombre Apellido"` crea el administrador. La contraseña se pide oculta en la terminal.
+3. Solo si ya había colaboradores: `npm run auth:migrar` muestra las cuentas que se van a crear y `npm run auth:migrar -- --aplicar` las crea. Quedan sin contraseña y cada persona la crea en `/auth/forgot-password`.
+
+Cuando un admin crea un colaborador con correo, se le crea la cuenta sin contraseña. El colaborador la crea en `/auth/forgot-password` con su correo registrado. Si se cambia el correo, el rol o el estado de la ficha, el cambio se refleja en la cuenta y se cierran sus sesiones.
+
+### Cómo funciona
+
+| Tema | Comportamiento |
+| --- | --- |
+| Contraseñas | bcrypt con 12 rondas. Política: entre 8 y 128 caracteres, con mayúscula, minúscula, número y símbolo. No puede estar entre las 10.000 más comunes ni contener el correo o el nombre. No se pueden reutilizar las últimas 3. |
+| Fuerza bruta | 5 fallos en 15 min bloquean la cuenta 30 min. 10 fallos acumulados la bloquean hasta que un admin la desbloquee. Máximo 20 intentos por IP cada 15 min. Retardo progresivo de 1, 2, 4, 8 y 16 s. El mensaje siempre es "Credenciales inválidas". |
+| Sesión | El access token (JWT cifrado de Auth.js) dura 15 min y guarda solo userId, role, cid, iat y exp. El refresh token dura 7 días y se rota en cada uso dentro de [src/proxy.ts](src/proxy.ts). En Airtable solo se guarda su hash SHA-256. Si se reutiliza un refresh token ya rotado, se revoca toda su familia. |
+| Cookies | `__Host-` en producción, con HttpOnly, Secure, SameSite=Strict y Path=/. |
+| Restablecer | El token sale de `crypto.randomBytes(32)` y se guarda hasheado con SHA-256. Vence en 1 hora y sirve una sola vez. Se permiten 3 solicitudes por correo cada hora. La respuesta es la misma exista o no el correo, y se envía antes de consultar la base. |
+| CSRF | Auth.js protege el login. Los endpoints propios exigen la cabecera `X-CSRF-Token` firmada y un `Origin` válido. |
+| Auditoría | La tabla `auth_logs` registra logins, bloqueos, solicitudes de reset y cambios de contraseña. Nunca guarda contraseñas ni tokens. |
+
+**Desbloquear una cuenta (bloqueo permanente):** en `Usuarios`, desmarque `locked_permanently` y ponga `total_failed_attempts` en 0.
+
+**Correo:** el único correo que envía la app es el de recuperación de contraseña. Sale por Gmail SMTP con Nodemailer. En producción `SMTP_USER` y `SMTP_PASSWORD` son obligatorias. `SMTP_PASSWORD` es una contraseña de aplicación de Google (requiere verificación en 2 pasos). En desarrollo, sin estas variables, el correo se imprime en la consola del servidor.
+
+**Rate limiting:** los límites por IP y por correo viven en la memoria del servidor. En Vercel cada instancia lleva su propio contador, así que son aproximados. El bloqueo de cuentas por intentos fallidos se guarda en Airtable y siempre se aplica.
 
 ## Base de Airtable
 
@@ -52,10 +76,9 @@ Cree una base con las tres tablas siguientes. Los nombres de las tablas y de los
 | rol | Single select: admin, colaborador |
 | email | Email |
 | telefono | Phone |
-| codigo_verificacion | Single line text |
-| codigo_expira | Date con hora (GMT) |
 
-> Cree manualmente al primer administrador en Airtable (`rol = admin`, `estado = Activo`).
+> Los campos `codigo_verificacion` y `codigo_expira` del login anterior ya no se usan y se pueden eliminar.
+> Las tablas `Usuarios`, `refresh_tokens` y `auth_logs` las crea `npm run auth:setup` (ver [scripts/setup-airtable.mjs](scripts/setup-airtable.mjs)). **Restrinja el acceso a `Usuarios` en Airtable: contiene los hashes.**
 
 ### Desprendibles
 
@@ -122,5 +145,6 @@ En esa misma pantalla se puede descargar una plantilla de ejemplo. Durante el ca
 
 - En Next.js 16, `middleware.ts` pasó a llamarse **`proxy.ts`**. La protección de rutas está en [src/proxy.ts](src/proxy.ts).
 - Cada API route vuelve a verificar la sesión y el rol. El proxy no es la única barrera.
+- La Content-Security-Policy se genera en el proxy con un nonce por petición. Por eso todas las páginas se renderizan de forma dinámica (`connection()` en el layout raíz). El resto de encabezados de seguridad está en [next.config.ts](next.config.ts).
 - Las plantillas PDF están en `src/lib/pdf/*.tsx`: usan JSX, por eso la extensión es `.tsx` y no `.ts`.
 - `xlsx@0.18.5` (versión de npm) tiene vulnerabilidades conocidas sin parche. Solo se usa en el navegador del administrador para leer archivos que él mismo sube. Para mayor seguridad puede instalar la versión oficial de SheetJS: `npm i https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`.

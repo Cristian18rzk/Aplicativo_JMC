@@ -1,31 +1,17 @@
 import type { Rol } from "./colaborador";
 
-export interface LoginRequest {
-  cedula: string;
-}
-
-export interface LoginResponse {
-  mensaje: string;
-  /** Correo enmascarado al que se envió el código (si aplica). */
-  destino?: string;
-  /** Solo en desarrollo sin proveedor de correo: el código generado. */
-  codigoDesarrollo?: string;
-}
-
-export interface VerifyRequest {
-  cedula: string;
-  codigo: string;
-}
-
-export interface AuthUser {
-  id: string; // ID del registro en Airtable
-  cedula: string;
-  nombre: string;
+/** Identidad mínima extraída del access token (lo que usan las API routes para autorizar). */
+export interface SesionUsuario {
+  /** ID del registro en "Usuarios". */
+  usuarioId: string;
+  /** ID del colaborador asociado (vacío para un admin sin ficha). Se usa para el control de acceso propio. */
+  id: string;
   rol: Rol;
 }
 
-export interface Session {
-  usuario: AuthUser;
-  /** Fecha de expiración en milisegundos desde epoch. */
-  expira: number;
+/** Usuario que ve el navegador (GET /api/auth/me). Sin ningún dato de seguridad. */
+export interface AuthUser extends SesionUsuario {
+  nombre: string;
+  email: string;
+  cedula: string;
 }

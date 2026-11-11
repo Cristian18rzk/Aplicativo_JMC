@@ -2,7 +2,6 @@ import type Airtable from "airtable";
 import type {
   Area,
   Colaborador,
-  ColaboradorConCodigo,
   ColaboradorInput,
   EstadoColaborador,
   FiltrosColaboradores,
@@ -15,7 +14,7 @@ import { TABLAS, escaparFormula, leerNumero, leerTexto, tabla } from "./client";
 
 type RegistroAirtable = Airtable.Record<Airtable.FieldSet>;
 
-/** Convierte un registro de Airtable en un Colaborador (sin datos de verificación). */
+/** Convierte un registro de Airtable en un Colaborador. */
 function mapearColaborador(registro: RegistroAirtable): Colaborador {
   const c = registro.fields;
   return {
@@ -38,14 +37,6 @@ function mapearColaborador(registro: RegistroAirtable): Colaborador {
     rol: (leerTexto(c, "rol") || "colaborador") as Rol,
     email: leerTexto(c, "email"),
     telefono: leerTexto(c, "telefono"),
-  };
-}
-
-function mapearConCodigo(registro: RegistroAirtable): ColaboradorConCodigo {
-  return {
-    ...mapearColaborador(registro),
-    codigo_verificacion: leerTexto(registro.fields, "codigo_verificacion"),
-    codigo_expira: leerTexto(registro.fields, "codigo_expira"),
   };
 }
 
@@ -110,12 +101,12 @@ export async function getById(id: string): Promise<Colaborador | null> {
   }
 }
 
-/** Busca por cédula, incluyendo los campos de verificación (uso exclusivo en autenticación). */
-export async function getByCedula(cedula: string): Promise<ColaboradorConCodigo | null> {
+/** Busca por cédula (se usa para evitar duplicados). */
+export async function getByCedula(cedula: string): Promise<Colaborador | null> {
   const registros = await tabla(TABLAS.colaboradores)
     .select({ filterByFormula: `{cedula} = "${escaparFormula(cedula)}"`, maxRecords: 1 })
     .firstPage();
-  return registros[0] ? mapearConCodigo(registros[0]) : null;
+  return registros[0] ? mapearColaborador(registros[0]) : null;
 }
 
 export async function create(datos: ColaboradorInput): Promise<Colaborador> {
@@ -138,19 +129,6 @@ export async function update(id: string, datos: Partial<ColaboradorInput>): Prom
     typecast: true,
   });
   return mapearColaborador(registro);
-}
-
-/** Guarda (o limpia) el hash del código de verificación y su expiración. */
-export async function guardarCodigo(id: string, hashCodigo: string | null, expira: string | null) {
-  await tabla(TABLAS.colaboradores).update([
-    {
-      id,
-      fields: {
-        codigo_verificacion: hashCodigo ?? VACIO,
-        codigo_expira: expira ?? VACIO,
-      },
-    },
-  ]);
 }
 
 async function eliminar(id: string): Promise<void> {

@@ -1,21 +1,37 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getCsrfToken, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useMemo, type ReactNode } from "react";
 import { ErrorPeticion, peticion } from "@/lib/api-cliente";
-import type { AuthUser, LoginResponse } from "@/types/auth";
+import { destinoSeguro } from "@/lib/auth/rutas";
+import type { AuthUser } from "@/types/auth";
 
 export const CLAVE_USUARIO = ["auth", "me"] as const;
+
+/** Error de login con un código genérico (nunca indica si el email existe). */
+export class ErrorLogin extends Error {
+  constructor(public readonly codigo: "credenciales" | "limite" | "servicio" | "red") {
+    super(
+      codigo === "limite"
+        ? "Demasiados intentos desde esta red. Espera 15 minutos e inténtalo de nuevo."
+        : codigo === "servicio"
+          ? "El servicio no está disponible en este momento. Inténtalo de nuevo en unos minutos."
+          : codigo === "red"
+            ? "No fue posible conectar con el servidor. Revisa tu conexión."
+            : "Credenciales inválidas",
+    );
+    this.name = "ErrorLogin";
+  }
+}
 
 export interface ContextoAuth {
   usuario: AuthUser | null;
   isAdmin: boolean;
   isLoading: boolean;
-  /** Paso 1: solicita el código de verificación para una cédula. */
-  login: (cedula: string) => Promise<LoginResponse>;
-  /** Paso 2: valida el código, crea la sesión y redirige según el rol. */
-  verify: (cedula: string, codigo: string, redirigir?: string | null) => Promise<AuthUser>;
+  /** Valida email + contraseña con Auth.js, carga el usuario y redirige según el rol. */
+  iniciarSesion: (email: string, password: string, redirigir?: string | null) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refrescar: () => Promise<unknown>;
 }
@@ -32,11 +48,9 @@ async function obtenerUsuarioActual(): Promise<AuthUser | null> {
   }
 }
 
-/** Ruta interna segura a la que redirigir después del login (evita redirecciones abiertas). */
-function destinoSeguro(redirigir: string | null | undefined, usuario: AuthUser): string {
-  const inicio = usuario.rol === "admin" ? "/admin" : "/colaborador";
-  if (!redirigir || !redirigir.startsWith("/") || redirigir.startsWith("//")) return inicio;
-  return redirigir.startsWith(inicio) ? redirigir : inicio;
+/** Token CSRF de Auth.js para los endpoints propios (logout, forgot, reset). */
+export async function obtenerCsrf(): Promise<string> {
+  return getCsrfToken();
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -49,21 +63,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const login = useCallback(
-    (cedula: string) =>
-      peticion<LoginResponse>("/api/auth/login", { method: "POST", body: JSON.stringify({ cedula }) }),
-    [],
-  );
+  const iniciarSesion = useCallback(
+    async (email: string, password: string, redirigir?: string | null) => {
+      let resultado: Awaited<ReturnType<typeof signIn>> | undefined;
+      try {
+        // signIn obtiene el token CSRF de Auth.js y lo envía junto con las credenciales
+        resultado = await signIn("credentials", { email, password, redirect: false });
+      } catch {
+        throw new ErrorLogin("red");
+      }
+      if (!resultado || resultado.error) {
+        const codigo = resultado?.code;
+        throw new ErrorLogin(codigo === "limite" || codigo === "servicio" ? codigo : "credenciales");
+      }
 
-  const verify = useCallback(
-    async (cedula: string, codigo: string, redirigir?: string | null) => {
-      const { usuario: nuevo } = await peticion<{ usuario: AuthUser }>("/api/auth/verify", {
-        method: "POST",
-        body: JSON.stringify({ cedula, codigo }),
-      });
       queryClient.clear();
+      const nuevo = await obtenerUsuarioActual();
+      if (!nuevo) throw new ErrorLogin("credenciales");
       queryClient.setQueryData(CLAVE_USUARIO, nuevo);
-      router.replace(destinoSeguro(redirigir, nuevo));
+      router.replace(destinoSeguro(redirigir, nuevo.rol));
       router.refresh();
       return nuevo;
     },
@@ -72,11 +90,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await peticion("/api/auth/logout", { method: "POST" });
+      await peticion("/api/auth/logout", {
+        method: "POST",
+        headers: { "X-CSRF-Token": await obtenerCsrf() },
+      });
     } finally {
       queryClient.clear();
       queryClient.setQueryData(CLAVE_USUARIO, null);
-      router.replace("/login");
+      router.replace("/auth/login");
       router.refresh();
     }
   }, [queryClient, router]);
@@ -86,12 +107,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       usuario,
       isAdmin: usuario?.rol === "admin",
       isLoading,
-      login,
-      verify,
+      iniciarSesion,
       logout,
       refrescar: refetch,
     }),
-    [usuario, isLoading, login, verify, logout, refetch],
+    [usuario, isLoading, iniciarSesion, logout, refetch],
   );
 
   return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>;

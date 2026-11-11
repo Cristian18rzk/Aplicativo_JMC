@@ -3,9 +3,16 @@ import * as certificadosDb from "@/lib/airtable/certificados";
 import * as colaboradoresDb from "@/lib/airtable/colaboradores";
 import * as desprendiblesDb from "@/lib/airtable/desprendibles";
 import { ErrorApi, leerJson, leerPaginacion, manejarErrorApi } from "@/lib/api";
+import { getUsuarioPorId } from "@/lib/airtable/usuarios";
 import { esAdmin, requerirSesion } from "@/lib/auth/middleware";
 import { generarCertificadoSchema } from "@/lib/validators/certificado";
 import { TIPOS_CERTIFICADO, type ContenidoCertificado, type TipoCertificado } from "@/types/certificado";
+
+/** El JWT no lleva el nombre (solo identificadores): se consulta para dejar constancia de quién generó. */
+async function nombreDelUsuario(usuarioId: string): Promise<string> {
+  const usuario = await getUsuarioPorId(usuarioId);
+  return usuario?.nombre || usuario?.email || "Usuario";
+}
 
 /** GET /api/certificados?pagina=&porPagina=&tipo=&colaboradorId= — Admin ve todos; colaborador solo los suyos. */
 export async function GET(request: NextRequest) {
@@ -90,7 +97,7 @@ export async function POST(request: NextRequest) {
       colaboradorId: colaborador.id,
       tipo: datos.tipo,
       contenido,
-      generadoPor: `${usuario.nombre} (${usuario.rol === "admin" ? "Administrador" : "Autoservicio"})`,
+      generadoPor: `${await nombreDelUsuario(usuario.usuarioId)} (${usuario.rol === "admin" ? "Administrador" : "Autoservicio"})`,
     });
     return NextResponse.json(certificado, { status: 201 });
   } catch (error) {

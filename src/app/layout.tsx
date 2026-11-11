@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { ToastProvider } from "@/components/ui/toast";
 import { AuthProvider } from "@/providers/auth-provider";
@@ -27,7 +28,10 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // La CSP usa un nonce por petición (proxy.ts): todas las páginas deben renderizarse dinámicamente
+  // para que Next.js pueda aplicar ese nonce a sus scripts.
+  await connection();
   return (
     <html lang="es-CO" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full bg-fondo text-texto">

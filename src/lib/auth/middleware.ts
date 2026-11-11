@@ -1,24 +1,27 @@
+import "server-only";
 import type { NextRequest } from "next/server";
-import type { AuthUser } from "@/types/auth";
-import type { Rol } from "@/types/colaborador";
 import { ErrorApi } from "@/lib/api";
-import { NOMBRE_COOKIE_SESION, getSession, verifyToken } from "./session";
-
-/** Extrae el usuario autenticado de la petición (o de la cookie del contexto actual). */
-export async function obtenerUsuario(request?: NextRequest): Promise<AuthUser | null> {
-  const sesion = request
-    ? await verifyToken(request.cookies.get(NOMBRE_COOKIE_SESION)?.value)
-    : await getSession();
-  return sesion?.usuario ?? null;
-}
+import type { SesionUsuario } from "@/types/auth";
+import type { Rol } from "@/types/colaborador";
+import { getSession } from "./session";
 
 /**
- * Exige una sesión válida y, opcionalmente, uno de los roles indicados.
- * Lanza ErrorApi 401/403 que manejarErrorApi convierte en respuesta JSON.
+ * Usuario autenticado de la petición. proxy.ts ya rechaza las peticiones sin sesión a /api/*,
+ * pero cada API route vuelve a verificar el JWT (defensa en profundidad).
+ * El parámetro request se conserva por compatibilidad: la cookie se lee del contexto de la petición.
  */
-export async function requerirSesion(request?: NextRequest, roles?: Rol[]): Promise<AuthUser> {
-  const usuario = await obtenerUsuario(request);
-  if (!usuario) throw new ErrorApi(401, "Sesión no válida o expirada. Inicie sesión nuevamente.");
+export async function obtenerUsuario(): Promise<SesionUsuario | null> {
+  return getSession();
+}
+
+/** Exige una sesión válida y, opcionalmente, uno de los roles indicados (401/403). */
+export async function requerirSesion(request?: NextRequest, roles?: Rol[]): Promise<SesionUsuario> {
+  const usuario = await obtenerUsuario();
+  // Un colaborador sin ficha asociada no debe llegar nunca aquí; si llegara, un id vacío podría
+  // interpretarse como "sin filtro" en los listados, así que se rechaza explícitamente
+  if (!usuario || (usuario.rol === "colaborador" && !usuario.id)) {
+    throw new ErrorApi(401, "Sesión no válida o expirada. Inicia sesión nuevamente.");
+  }
   if (roles && !roles.includes(usuario.rol)) {
     throw new ErrorApi(403, "No tiene permisos para realizar esta acción");
   }
@@ -26,17 +29,17 @@ export async function requerirSesion(request?: NextRequest, roles?: Rol[]): Prom
 }
 
 /** Atajo: exige rol administrador. */
-export function requerirAdmin(request?: NextRequest): Promise<AuthUser> {
+export function requerirAdmin(request?: NextRequest): Promise<SesionUsuario> {
   return requerirSesion(request, ["admin"]);
 }
 
-export function esAdmin(usuario: AuthUser | null | undefined): boolean {
+export function esAdmin(usuario: SesionUsuario | null | undefined): boolean {
   return usuario?.rol === "admin";
 }
 
 /** Verifica que el usuario sea admin o el dueño del recurso. */
-export function verificarAccesoPropio(usuario: AuthUser, colaboradorId: string): void {
-  if (!esAdmin(usuario) && usuario.id !== colaboradorId) {
+export function verificarAccesoPropio(usuario: SesionUsuario, colaboradorId: string): void {
+  if (!esAdmin(usuario) && (!usuario.id || usuario.id !== colaboradorId)) {
     throw new ErrorApi(403, "No tiene permisos para acceder a este recurso");
   }
 }
