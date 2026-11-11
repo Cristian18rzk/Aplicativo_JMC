@@ -5,7 +5,7 @@ import { AuthContext, type ContextoAuth } from "@/providers/auth-provider";
 
 /**
  * Hook de autenticación.
- * Expone: usuario actual, isAdmin, isLoading, iniciarSesion (email + contraseña) y logout.
+ * Expone: usuario actual, isAdmin, isLoading, iniciarSesion (cédula + PIN) y logout.
  */
 export function useAuth(): ContextoAuth {
   const contexto = useContext(AuthContext);

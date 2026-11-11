@@ -25,7 +25,7 @@ const primerNombre = (nombre: string) => nombre.trim().split(/\s+/)[0] || "";
 
 /**
  * Correo responsive y accesible: tablas de maquetación con role="presentation" (compatibilidad con
- * Outlook/Gmail), ancho fluido hasta 560px y contraste AA (#1e293b sobre blanco, blanco sobre #1e40af).
+ * Outlook/Gmail), ancho fluido hasta 560px y contraste AA (#2B2D2C sobre blanco, blanco sobre #2E6B3F).
  */
 export function plantillaRestablecer(datos: { nombre: string; url: string; vigenciaMinutos: number }): Omit<Correo, "para"> {
   const nombre = escapar(primerNombre(datos.nombre));
@@ -44,30 +44,30 @@ export function plantillaRestablecer(datos: { nombre: string; url: string; vigen
 <title>Restablece tu contraseña</title>
 <style>@media (max-width: 600px) { .contenedor { width: 100% !important; } .relleno { padding: 24px 20px !important; } }</style>
 </head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
+<body style="margin:0;padding:0;background:#FAF8F4;font-family:Figtree,Arial,Helvetica,sans-serif;color:#2B2D2C;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">El enlace vence en ${vigencia}.</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FAF8F4;">
   <tr><td align="center" style="padding:32px 12px;">
-    <table role="presentation" class="contenedor" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;">
-      <tr><td style="padding:24px 32px;border-bottom:1px solid #e2e8f0;">
-        <span style="display:inline-block;background:#1e40af;color:#ffffff;font-weight:bold;font-size:14px;padding:8px 10px;border-radius:8px;">${nombreEmpresa}</span>
-        <span style="font-size:14px;color:#475569;margin-left:8px;">Portal de nómina</span>
+    <table role="presentation" class="contenedor" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #E6E1D8;">
+      <tr><td style="padding:24px 32px;border-bottom:3px double #B8955A;">
+        <span style="display:inline-block;background:#2E6B3F;color:#ffffff;font-weight:bold;font-size:14px;padding:8px 10px;border-radius:8px;">${nombreEmpresa}</span>
+        <span style="font-size:14px;color:#6B6862;margin-left:8px;">Portal de nómina</span>
       </td></tr>
       <tr><td class="relleno" style="padding:32px;font-size:15px;line-height:1.6;">
-        <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3;color:#0f172a;">Restablece tu contraseña</h1>
+        <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3;color:#2B2D2C;">Restablece tu contraseña</h1>
         <p style="margin:0 0 16px;">${saludo}</p>
         <p style="margin:0 0 16px;">Recibimos una solicitud para restablecer la contraseña de tu cuenta. Haz clic en el botón para crear una nueva:</p>
-        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;"><tr><td style="border-radius:8px;background:#1e40af;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;"><tr><td style="border-radius:8px;background:#2E6B3F;">
           <a href="${url}" target="_blank" rel="noopener" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:8px;">Crear nueva contraseña</a>
         </td></tr></table>
         <p style="margin:0 0 16px;"><strong>El enlace vence en ${vigencia}</strong> y solo se puede usar una vez.</p>
-        <p style="margin:0 0 16px;font-size:13px;color:#475569;">Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
-          <a href="${url}" style="color:#1e40af;word-break:break-all;">${url}</a></p>
-        <p style="margin:0;padding:12px 16px;background:#f8fafc;border-left:4px solid #94a3b8;font-size:14px;">
+        <p style="margin:0 0 16px;font-size:13px;color:#6B6862;">Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
+          <a href="${url}" style="color:#2E6B3F;word-break:break-all;">${url}</a></p>
+        <p style="margin:0;padding:12px 16px;background:#FBF8F2;border-left:4px solid #B8955A;font-size:14px;">
           Si no solicitaste esto, ignora este email. Tu contraseña actual seguirá funcionando.
         </p>
       </td></tr>
-      <tr><td style="padding:20px 32px;border-top:1px solid #e2e8f0;font-size:13px;line-height:1.5;color:#475569;">
+      <tr><td style="padding:20px 32px;border-top:1px solid #E6E1D8;font-size:13px;line-height:1.5;color:#6B6862;">
         ¿Necesitas ayuda? Comunícate con el área de Talento Humano.<br>
         Este es un mensaje automático de ${nombreEmpresa}; no respondas a este correo.
       </td></tr>

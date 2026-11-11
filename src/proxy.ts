@@ -37,7 +37,7 @@ function construirCsp(nonce: string): string {
   ].join("; ");
 }
 
-/** Endpoints de /api/auth/* que deben funcionar sin sesión (login, CSRF, reset, logout). */
+/** Endpoints de /api/auth/* que deben funcionar sin sesión (login, CSRF, crear PIN, logout). */
 function esApiAuthPublica(ruta: string): boolean {
   return ruta.startsWith("/api/auth/") && ruta !== "/api/auth/me";
 }
@@ -93,9 +93,9 @@ export async function proxy(request: NextRequest) {
 
   // ── 3. Páginas ──
   if (esPaginaAuth) {
-    // /auth/* solo sin sesión. Excepción: el enlace de restablecimiento funciona aunque haya una
-    // sesión abierta en este navegador (al completarlo se cierra).
-    if (sesion && pathname !== "/auth/reset-password") return redirigir(inicioSegunRol(sesion.role));
+    // /auth/* solo sin sesión. Excepción: crear el PIN tras entrar con un PIN temporal funciona aunque
+    // este navegador tenga abierta la sesión de otra persona (al completarlo se cierra).
+    if (sesion && pathname !== "/auth/crear-pin") return redirigir(inicioSegunRol(sesion.role));
   } else if (!sesion) {
     const login = new URL("/auth/login", request.url);
     if (pathname !== "/") login.searchParams.set("redirigir", pathname);

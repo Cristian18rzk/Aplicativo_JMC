@@ -40,7 +40,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
           id={idCampo}
           required={required}
           aria-invalid={error ? true : undefined}
-          className={cn(clasesCampo(Boolean(error)), "h-10 appearance-none pr-9", className)}
+          className={cn(clasesCampo(Boolean(error)), "h-11 appearance-none pr-9", className)}
           {...props}
         >
           {placeholder !== undefined ? <option value="">{placeholder}</option> : null}

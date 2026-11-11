@@ -1,32 +1,27 @@
 "use client";
 
-import { ArrowLeft, Download, FileText, Pencil, Trash } from "lucide-react";
+import { ArrowLeft, Award, Download, FileText, Pencil, Trash, Upload } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { AccesoColaborador } from "@/components/colaboradores/acceso-colaborador";
 import { ColaboradorCard } from "@/components/colaboradores/colaborador-card";
 import { ColaboradorForm } from "@/components/colaboradores/colaborador-form";
+import { DesprendibleForm } from "@/components/desprendibles/desprendible-form";
 import { Button, clasesBoton } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CargandoPagina } from "@/components/ui/loading-spinner";
 import { Modal } from "@/components/ui/modal";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useColaborador, useDeleteColaborador, useUpdateColaborador } from "@/hooks/use-colaboradores";
-import { useDesprendibles } from "@/hooks/use-desprendibles";
+import { useCertificados } from "@/hooks/use-certificados";
+import { useDesprendibles, useSubirDesprendible } from "@/hooks/use-desprendibles";
 import { useToast } from "@/hooks/use-toast";
 import { ErrorPeticion, mensajeDeError } from "@/lib/api-cliente";
-import { formatCurrency, formatPeriodo } from "@/lib/utils";
+import { formatDate, formatPeriodo } from "@/lib/utils";
 import type { ColaboradorInput } from "@/types/colaborador";
-
-function DatoDetalle({ etiqueta, valor }: { etiqueta: string; valor: string }) {
-  return (
-    <div>
-      <dt className="text-xs text-texto-suave">{etiqueta}</dt>
-      <dd className="text-sm font-medium text-texto">{valor || "—"}</dd>
-    </div>
-  );
-}
+import type { DesprendibleInput } from "@/types/desprendible";
 
 function DetalleColaborador() {
   const { id } = useParams<{ id: string }>();
@@ -36,9 +31,12 @@ function DetalleColaborador() {
 
   const [editando, setEditando] = useState(parametros.get("editar") === "1");
   const [confirmarEliminar, setConfirmarEliminar] = useState(false);
+  const [subiendo, setSubiendo] = useState(false);
 
   const { data: colaborador, isLoading, isError, error } = useColaborador(id);
   const desprendibles = useDesprendibles({ colaboradorId: id, porPagina: 6 });
+  const certificados = useCertificados({ colaboradorId: id, porPagina: 5 });
+  const subir = useSubirDesprendible();
   const actualizar = useUpdateColaborador();
   const eliminar = useDeleteColaborador();
 
@@ -66,6 +64,17 @@ function DetalleColaborador() {
       router.replace(`/admin/colaboradores/${id}`);
     } catch (err) {
       toast.error("No fue posible guardar los cambios", { descripcion: mensajeDeError(err) });
+    }
+  };
+
+  const subirDesprendible = async (datos: DesprendibleInput, archivo: File | null) => {
+    if (!archivo) return;
+    try {
+      await subir.mutateAsync({ datos, archivo });
+      toast.success("Desprendible cargado");
+      setSubiendo(false);
+    } catch (err) {
+      toast.error("No fue posible cargar el desprendible", { descripcion: mensajeDeError(err) });
     }
   };
 
@@ -118,48 +127,23 @@ function DetalleColaborador() {
         <>
           <ColaboradorCard colaborador={colaborador} />
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Seguridad social</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="grid grid-cols-2 gap-4">
-                  <DatoDetalle etiqueta="EPS" valor={colaborador.eps} />
-                  <DatoDetalle etiqueta="Fondo de pensiones" valor={colaborador.fondo_pensiones} />
-                  <DatoDetalle etiqueta="ARL" valor={colaborador.arl} />
-                  <DatoDetalle etiqueta="Caja de compensación" valor={colaborador.caja_compensacion} />
-                </dl>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Datos bancarios y acceso</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className="grid grid-cols-2 gap-4">
-                  <DatoDetalle etiqueta="Banco" valor={colaborador.banco} />
-                  <DatoDetalle etiqueta="Número de cuenta" valor={colaborador.cuenta_bancaria} />
-                  <DatoDetalle etiqueta="Rol" valor={colaborador.rol === "admin" ? "Administrador" : "Colaborador"} />
-                  <DatoDetalle etiqueta="Salario base" valor={formatCurrency(colaborador.salario_base)} />
-                </dl>
-              </CardContent>
-            </Card>
-          </div>
-
           <Card>
-            <CardHeader className="flex-row items-center justify-between">
-              <CardTitle>Últimos desprendibles</CardTitle>
-              <Link href="/admin/desprendibles" className="text-sm font-medium text-acento hover:underline">
-                Ir a desprendibles
-              </Link>
+            <CardHeader className="flex-row items-center justify-between gap-3">
+              <div>
+                <CardTitle>Desprendibles de pago</CardTitle>
+                <p className="text-sm text-texto-suave">Últimos documentos publicados para este colaborador.</p>
+              </div>
+              <Button tamano="sm" onClick={() => setSubiendo(true)}>
+                <Upload className="h-4 w-4" aria-hidden />
+                Subir desprendible
+              </Button>
             </CardHeader>
             {desprendibles.data && desprendibles.data.datos.length > 0 ? (
               <Table>
                 <TableHeader>
                   <tr>
                     <TableHead>Periodo</TableHead>
-                    <TableHead className="text-right">Neto a pagar</TableHead>
+                    <TableHead className="hidden sm:table-cell">Publicado</TableHead>
                     <TableHead className="text-right">PDF</TableHead>
                   </tr>
                 </TableHeader>
@@ -169,15 +153,19 @@ function DetalleColaborador() {
                       <TableCell>
                         {formatPeriodo(d.periodo)} <span className="text-texto-suave">· {d.tipo_periodo}</span>
                       </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">{formatCurrency(d.neto_a_pagar)}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{formatDate(d.fecha_carga)}</TableCell>
                       <TableCell className="text-right">
-                        <a
-                          href={`/api/desprendibles/${d.id}/pdf?descargar=1`}
-                          className="inline-flex rounded-lg p-2 text-texto-suave hover:bg-slate-100 hover:text-acento"
-                          aria-label="Descargar PDF"
-                        >
-                          <Download className="h-4 w-4" />
-                        </a>
+                        {d.tieneArchivo ? (
+                          <a
+                            href={`/api/desprendibles/${d.id}/pdf?descargar=1`}
+                            className="inline-flex rounded-lg p-2 text-texto-suave hover:bg-slate-100 hover:text-acento"
+                            aria-label={`Descargar desprendible de ${formatPeriodo(d.periodo)}`}
+                          >
+                            <Download className="h-4 w-4" />
+                          </a>
+                        ) : (
+                          <span className="text-xs text-texto-suave">Sin archivo</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -190,9 +178,75 @@ function DetalleColaborador() {
                 descripcion={desprendibles.isLoading ? undefined : "Este colaborador aún no tiene desprendibles."}
               />
             )}
+            {desprendibles.data && desprendibles.data.total > desprendibles.data.datos.length ? (
+              <div className="border-t border-borde px-5 py-3 text-right">
+                <Link href="/admin/desprendibles" className="text-sm font-medium text-acento hover:underline">
+                  Ver los {desprendibles.data.total} desprendibles
+                </Link>
+              </div>
+            ) : null}
           </Card>
+
+          <Card>
+            <CardHeader className="flex-row items-center justify-between gap-3">
+              <div>
+                <CardTitle>Certificados laborales</CardTitle>
+                <p className="text-sm text-texto-suave">Certificados generados para este colaborador.</p>
+              </div>
+              <Link href="/admin/certificados" className={clasesBoton("secondary", "sm")}>
+                <Award className="h-4 w-4" aria-hidden />
+                Generar certificado
+              </Link>
+            </CardHeader>
+            {certificados.data && certificados.data.datos.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <tr>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead className="hidden sm:table-cell">Generado por</TableHead>
+                    <TableHead className="text-right">PDF</TableHead>
+                  </tr>
+                </TableHeader>
+                <TableBody>
+                  {certificados.data.datos.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell>{formatDate(c.fecha_generacion)}</TableCell>
+                      <TableCell className="hidden text-texto-suave sm:table-cell">{c.generado_por || "—"}</TableCell>
+                      <TableCell className="text-right">
+                        <a
+                          href={`/api/certificados/${c.id}/pdf?descargar=1`}
+                          className="inline-flex rounded-lg p-2 text-texto-suave hover:bg-slate-100 hover:text-acento"
+                          aria-label={`Descargar certificado del ${formatDate(c.fecha_generacion)}`}
+                        >
+                          <Download className="h-4 w-4" />
+                        </a>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <EmptyState
+                icono={Award}
+                titulo={certificados.isLoading ? "Cargando…" : "Sin certificados"}
+                descripcion={certificados.isLoading ? undefined : "Aún no se han generado certificados para este colaborador."}
+              />
+            )}
+          </Card>
+
+          <AccesoColaborador colaborador={colaborador} />
         </>
       )}
+
+      <Modal abierto={subiendo} onCerrar={() => setSubiendo(false)} titulo="Subir desprendible" descripcion={`${colaborador.nombres} ${colaborador.apellidos}`} ancho="lg">
+        <DesprendibleForm
+          colaboradores={[colaborador]}
+          colaboradorInicialId={colaborador.id}
+          onEnviar={subirDesprendible}
+          onCancelar={() => setSubiendo(false)}
+          enviando={subir.isPending}
+        />
+      </Modal>
 
       <Modal
         abierto={confirmarEliminar}

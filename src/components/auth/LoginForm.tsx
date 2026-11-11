@@ -3,19 +3,25 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LogIn } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useAuth } from "@/hooks/use-auth";
+import { LONGITUD_MAXIMA_SECRETO, LONGITUD_PIN, LONGITUD_PIN_TEMPORAL } from "@/lib/auth/pin";
 import { loginSchema, type LoginSchema } from "@/lib/validators/auth";
 import { ErrorLogin } from "@/providers/auth-provider";
 import { AlertaAuth, BotonAuth, CampoAuth, TarjetaAuth } from "./auth-ui";
 
+/** Campos grandes: la mayoría de usuarios son personal de campo, muchos de edad. */
+const CLASE_CAMPO_GRANDE = "h-14 text-xl sm:text-xl";
+
 export function LoginForm() {
   const { iniciarSesion } = useAuth();
+  const router = useRouter();
   const parametros = useSearchParams();
   const redirigir = parametros.get("redirigir");
-  const [errorServidor, setErrorServidor] = useState<{ mensaje: string; intento: number } | null>(null);
+  const [errorServidor, setErrorServidor] = useState<{ mensaje: string; intento: number; codigo: string } | null>(null);
+  const [modoAdmin, setModoAdmin] = useState(false);
 
   const {
     register,
@@ -24,17 +30,22 @@ export function LoginForm() {
     formState: { errors, isSubmitting, isSubmitSuccessful },
   } = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { cedula: "", password: "" },
     mode: "onTouched",
   });
 
-  const enviar = handleSubmit(async ({ email, password }) => {
+  const enviar = handleSubmit(async ({ cedula, password }) => {
     setErrorServidor(null);
     try {
-      await iniciarSesion(email, password, redirigir);
+      await iniciarSesion(cedula, password, redirigir);
     } catch (error) {
-      const mensaje = error instanceof ErrorLogin ? error.message : "Credenciales inválidas";
-      setErrorServidor((previo) => ({ mensaje, intento: (previo?.intento ?? 0) + 1 }));
+      if (error instanceof ErrorLogin && error.codigo === "cambiar_pin") {
+        router.push("/auth/crear-pin");
+        return;
+      }
+      const codigo = error instanceof ErrorLogin ? error.codigo : "credenciales";
+      const mensaje = error instanceof ErrorLogin ? error.message : "Cédula o PIN incorrectos";
+      setErrorServidor((previo) => ({ mensaje, codigo, intento: (previo?.intento ?? 0) + 1 }));
       resetField("password");
       // Re-lanzar marca el envío como no exitoso para RHF (mantiene el botón habilitado)
       throw error;
@@ -42,18 +53,14 @@ export function LoginForm() {
   });
 
   const avisoInicial =
-    parametros.get("reset") === "ok"
-      ? { tipo: "exito" as const, texto: "Tu contraseña fue actualizada. Ya puedes iniciar sesión." }
-      : parametros.get("expirada") === "1"
-        ? { tipo: "info" as const, texto: "Tu sesión expiró. Inicia sesión nuevamente." }
-        : null;
+    parametros.get("expirada") === "1" ? { tipo: "info" as const, texto: "Tu sesión expiró. Ingresa nuevamente." } : null;
 
   const redirigiendo = isSubmitSuccessful && !errorServidor;
 
   return (
     <TarjetaAuth
-      titulo="Iniciar sesión"
-      descripcion="Ingresa con tu correo corporativo para consultar tus desprendibles y certificados."
+      titulo="Ingresar"
+      descripcion="Escribe tu número de cédula y tu PIN para ver tus desprendibles y certificados."
       icono={<LogIn className="h-5 w-5" aria-hidden />}
     >
       <form
@@ -68,9 +75,10 @@ export function LoginForm() {
           <div id="error-login">
             <AlertaAuth tipo="error" clave={errorServidor.intento}>
               <p className="font-medium">{errorServidor.mensaje}</p>
-              {errorServidor.mensaje === "Credenciales inválidas" ? (
+              {errorServidor.codigo === "credenciales" ? (
                 <p className="mt-0.5">
-                  Verifica tus datos. Tras varios intentos fallidos la cuenta se bloquea temporalmente.
+                  Revisa los números. Si te equivocas varias veces, la cuenta se bloquea por 30 minutos. Si nunca
+                  has creado tu PIN, usa «Es mi primera vez».
                 </p>
               ) : null}
             </AlertaAuth>
@@ -82,40 +90,81 @@ export function LoginForm() {
         ) : null}
 
         <CampoAuth
-          label="Correo electrónico"
-          type="email"
-          inputMode="email"
+          label="Número de cédula"
+          type="text"
+          inputMode="numeric"
           autoComplete="username"
-          autoCapitalize="none"
           spellCheck={false}
-          placeholder="nombre@empresa.com"
+          placeholder="Sin puntos ni espacios"
+          maxLength={15}
           autoFocus
-          error={errors.email?.message}
-          {...register("email")}
+          className={CLASE_CAMPO_GRANDE}
+          error={errors.cedula?.message}
+          {...register("cedula")}
         />
 
         <div className="space-y-2">
-          <CampoAuth
-            label="Contraseña"
-            type="password"
-            autoComplete="current-password"
-            conmutarVisibilidad
-            error={errors.password?.message}
-            {...register("password")}
-          />
-          <div className="flex justify-end">
+          {modoAdmin ? (
+            <CampoAuth
+              key="contrasena"
+              label="Contraseña de administrador"
+              type="password"
+              autoComplete="current-password"
+              conmutarVisibilidad
+              maxLength={LONGITUD_MAXIMA_SECRETO}
+              error={errors.password?.message}
+              {...register("password")}
+            />
+          ) : (
+            <CampoAuth
+              key="pin"
+              label="PIN"
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="current-password"
+              conmutarVisibilidad
+              maxLength={LONGITUD_PIN_TEMPORAL}
+              className={`${CLASE_CAMPO_GRANDE} tracking-[0.4em]`}
+              error={errors.password?.message}
+              ayuda={`Tu PIN de ${LONGITUD_PIN} números (o el PIN temporal que te entregó el administrador).`}
+              {...register("password")}
+            />
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <Link
-              href="/auth/forgot-password"
-              className="rounded text-sm font-medium text-blue-800 underline-offset-4 hover:underline dark:text-blue-400"
+              href="/auth/olvide-pin"
+              className="rounded text-base font-medium text-palma-600 underline-offset-4 hover:underline dark:text-palma-400"
             >
-              ¿Olvidaste tu contraseña?
+              ¿Olvidaste tu PIN?
             </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setModoAdmin((v) => !v);
+                resetField("password");
+              }}
+              className="rounded text-sm text-slate-500 underline-offset-4 hover:underline dark:text-slate-400"
+            >
+              {modoAdmin ? "Ingresar con PIN" : "Soy administrador"}
+            </button>
           </div>
         </div>
 
-        <BotonAuth cargando={isSubmitting || redirigiendo} textoCargando={redirigiendo ? "Entrando…" : "Verificando…"}>
-          Iniciar sesión
+        <BotonAuth
+          cargando={isSubmitting || redirigiendo}
+          textoCargando={redirigiendo ? "Entrando…" : "Verificando…"}
+          className="h-14 text-lg"
+        >
+          Ingresar
         </BotonAuth>
+
+        <Link
+          href="/auth/primer-ingreso"
+          className="flex h-14 w-full items-center justify-center rounded-lg border-2 border-palma-600 text-lg font-semibold text-palma-700 hover:bg-palma-50 dark:border-palma-400 dark:text-palma-300 dark:hover:bg-palma-950"
+        >
+          Es mi primera vez: crear mi PIN
+        </Link>
       </form>
     </TarjetaAuth>
   );

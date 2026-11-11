@@ -21,7 +21,7 @@ export function hashesIguales(a: string, b: string): boolean {
   return bufA.length === bufB.length && bufA.length > 0 && timingSafeEqual(bufA, bufB);
 }
 
-/** Clave estable y no reversible para rate limiting por email (no se guarda el email en claro). */
-export function claveEmail(email: string): string {
-  return sha256(`rl:${email.trim().toLowerCase()}`).slice(0, 32);
+/** Clave estable y no reversible para rate limiting por cédula (no se guarda la cédula en claro). */
+export function claveIdentificador(identificador: string): string {
+  return sha256(`rl:${identificador.trim().toLowerCase()}`).slice(0, 32);
 }

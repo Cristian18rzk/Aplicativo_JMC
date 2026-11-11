@@ -6,14 +6,16 @@ import { LoadingSpinner } from "./loading-spinner";
 
 const VARIANTES = {
   primary: "bg-acento text-white shadow-sm hover:bg-acento-hover focus-visible:outline-acento",
-  secondary: "border border-borde bg-white text-texto shadow-sm hover:bg-slate-50",
+  secondary: "border border-borde-fuerte bg-white text-texto hover:bg-slate-50",
   ghost: "text-texto hover:bg-slate-100",
-  destructive: "bg-error text-white shadow-sm hover:bg-red-700 focus-visible:outline-error",
+  destructive: "bg-error text-white shadow-sm hover:bg-[#962c23] focus-visible:outline-error",
+  /** Naranja Sol: acciones de énfasis puntual (no reemplaza al primario) */
+  sol: "bg-sol text-texto shadow-sm hover:bg-sol-claro focus-visible:outline-sol",
 } as const;
 
 const TAMANOS = {
   sm: "h-8 gap-1.5 px-3 text-xs",
-  md: "h-10 gap-2 px-4 text-sm",
+  md: "h-11 gap-2 px-[18px] text-sm",
   lg: "h-12 gap-2 px-6 text-base",
 } as const;
 
@@ -30,7 +32,7 @@ export function clasesBoton(
   className?: string,
 ) {
   return cn(
-    "inline-flex items-center justify-center rounded-lg font-medium whitespace-nowrap transition-colors duration-150",
+    "inline-flex items-center justify-center rounded-lg font-semibold whitespace-nowrap transition-colors duration-150",
     "disabled:pointer-events-none disabled:opacity-60",
     VARIANTES[variante],
     TAMANOS[tamano],

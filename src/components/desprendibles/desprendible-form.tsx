@@ -1,251 +1,148 @@
 "use client";
 
-import { Calculator, Save } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
-import { z } from "zod";
+import { FileText, X } from "lucide-react";
+import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { calcularAportesLey, calcularLiquidacion } from "@/lib/nomina";
-import { formatCurrency, periodoActual } from "@/lib/utils";
-import { desprendibleSchema } from "@/lib/validators/desprendible";
+import { formatTamano, periodoActual } from "@/lib/utils";
+import { desprendibleSchema, validarArchivoPdf } from "@/lib/validators/desprendible";
 import type { Colaborador } from "@/types/colaborador";
-import { TIPOS_PERIODO, type Desprendible, type DesprendibleInput, type ValoresDesprendible } from "@/types/desprendible";
+import { TIPOS_PERIODO, type Desprendible, type DesprendibleInput, type TipoPeriodo } from "@/types/desprendible";
+import { ZonaArchivos } from "./zona-archivos";
 
-type CampoNumerico = keyof ValoresDesprendible;
+type Errores = Partial<Record<keyof DesprendibleInput | "archivo", string>>;
 
-const CAMPOS_DEVENGADOS: { clave: CampoNumerico; etiqueta: string; ayuda?: string }[] = [
-  { clave: "salario_base", etiqueta: "Salario base mensual" },
-  { clave: "dias_trabajados", etiqueta: "Días trabajados", ayuda: "15 para quincena, 30 para mes" },
-  { clave: "horas_extras_diurnas", etiqueta: "Horas extras diurnas", ayuda: "Cantidad de horas" },
-  { clave: "horas_extras_nocturnas", etiqueta: "Horas extras nocturnas", ayuda: "Cantidad de horas" },
-  { clave: "recargos_nocturnos", etiqueta: "Recargos nocturnos", ayuda: "Cantidad de horas" },
-  { clave: "dominicales_festivos", etiqueta: "Dominicales y festivos", ayuda: "Cantidad de horas" },
-  { clave: "auxilio_transporte", etiqueta: "Auxilio de transporte" },
-  { clave: "otros_devengados", etiqueta: "Otros devengados" },
-];
-
-const CAMPOS_DEDUCCIONES: { clave: CampoNumerico; etiqueta: string }[] = [
-  { clave: "deduccion_salud", etiqueta: "Salud" },
-  { clave: "deduccion_pension", etiqueta: "Pensión" },
-  { clave: "retencion_fuente", etiqueta: "Retención en la fuente" },
-  { clave: "otros_descuentos", etiqueta: "Otros descuentos" },
-];
-
-interface Estado {
-  colaboradorId: string;
-  periodo: string;
-  tipo_periodo: string;
-  descripcion_otros: string;
-  descripcion_descuentos: string;
-  numeros: Record<CampoNumerico, string>;
-}
-
-function estadoInicial(d?: Desprendible | null): Estado {
-  const numeros = {} as Record<CampoNumerico, string>;
-  for (const { clave } of [...CAMPOS_DEVENGADOS, ...CAMPOS_DEDUCCIONES]) {
-    numeros[clave] = d ? String(d[clave] ?? 0) : clave === "dias_trabajados" ? "30" : "0";
-  }
-  return {
-    colaboradorId: d?.colaboradorId ?? "",
-    periodo: d?.periodo ?? periodoActual(),
-    tipo_periodo: d?.tipo_periodo ?? "Mensual",
-    descripcion_otros: d?.descripcion_otros ?? "",
-    descripcion_descuentos: d?.descripcion_descuentos ?? "",
-    numeros,
-  };
-}
-
-/** "1.234.567" → 1234567 (miles con punto); "7,5" o "7.5" → 7.5 (decimal). */
-const aNumero = (texto: string) => {
-  const limpio = texto.replace(/[$\s]/g, "");
-  const normalizado = /^\d{1,3}(\.\d{3})+(,\d+)?$/.test(limpio)
-    ? limpio.replace(/\./g, "").replace(",", ".")
-    : limpio.replace(",", ".");
-  const n = Number(normalizado);
-  return Number.isFinite(n) ? n : 0;
-};
-
-interface DesprendibleFormProps {
-  colaboradores: Colaborador[];
-  valoresIniciales?: Desprendible | null;
-  onEnviar: (datos: DesprendibleInput) => Promise<unknown>;
-  onCancelar?: () => void;
+/**
+ * Formulario para subir el PDF de un desprendible (o editar uno existente).
+ * En edición el archivo es opcional: si se adjunta, reemplaza al actual.
+ */
+export function DesprendibleForm({
+  colaboradores,
+  valoresIniciales,
+  colaboradorInicialId,
+  onEnviar,
+  onCancelar,
+  enviando,
+}: {
+  colaboradores: Pick<Colaborador, "id" | "nombres" | "apellidos" | "cedula">[];
+  valoresIniciales?: Desprendible;
+  /** Preselecciona el colaborador (p. ej. al subir desde su ficha). */
+  colaboradorInicialId?: string;
+  onEnviar: (datos: DesprendibleInput, archivo: File | null) => void | Promise<void>;
+  onCancelar: () => void;
   enviando?: boolean;
-}
+}) {
+  const editando = Boolean(valoresIniciales);
+  const [datos, setDatos] = useState<DesprendibleInput>({
+    colaboradorId: valoresIniciales?.colaboradorId ?? colaboradorInicialId ?? "",
+    periodo: valoresIniciales?.periodo ?? periodoActual(),
+    tipo_periodo: valoresIniciales?.tipo_periodo ?? "Mensual",
+  });
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [errores, setErrores] = useState<Errores>({});
 
-/** Formulario de desprendible individual con cálculo en vivo de totales. */
-export function DesprendibleForm({ colaboradores, valoresIniciales, onEnviar, onCancelar, enviando }: DesprendibleFormProps) {
-  const [estado, setEstado] = useState<Estado>(() => estadoInicial(valoresIniciales));
-  const [errores, setErrores] = useState<Record<string, string>>({});
-
-  const valoresNumericos = useMemo(() => {
-    const v = {} as ValoresDesprendible;
-    for (const clave of Object.keys(estado.numeros) as CampoNumerico[]) v[clave] = aNumero(estado.numeros[clave]);
-    return v;
-  }, [estado.numeros]);
-
-  const liquidacion = calcularLiquidacion(valoresNumericos);
-
-  const cambiarNumero = (clave: CampoNumerico, valor: string) =>
-    setEstado((e) => ({ ...e, numeros: { ...e.numeros, [clave]: valor } }));
-
-  const seleccionarColaborador = (id: string) => {
-    const colaborador = colaboradores.find((c) => c.id === id);
-    setEstado((e) => ({
-      ...e,
-      colaboradorId: id,
-      numeros: colaborador ? { ...e.numeros, salario_base: String(colaborador.salario_base) } : e.numeros,
-    }));
+  const cambiar = <K extends keyof DesprendibleInput>(campo: K, valor: DesprendibleInput[K]) => {
+    setDatos((d) => ({ ...d, [campo]: valor }));
+    setErrores((e) => ({ ...e, [campo]: undefined }));
   };
 
-  const cambiarTipo = (tipo: string) =>
-    setEstado((e) => ({
-      ...e,
-      tipo_periodo: tipo,
-      numeros: { ...e.numeros, dias_trabajados: tipo === "Mensual" ? "30" : "15" },
-    }));
-
-  const calcularAportes = () => {
-    const { salud, pension } = calcularAportesLey(valoresNumericos);
-    setEstado((e) => ({
-      ...e,
-      numeros: { ...e.numeros, deduccion_salud: String(salud), deduccion_pension: String(pension) },
-    }));
+  const elegirArchivo = ([primero]: File[]) => {
+    const error = validarArchivoPdf(primero);
+    setErrores((e) => ({ ...e, archivo: error ?? undefined }));
+    setArchivo(error ? null : primero);
   };
 
-  const enviar = async (evento: FormEvent) => {
-    evento.preventDefault();
-    const resultado = desprendibleSchema.safeParse({
-      colaboradorId: estado.colaboradorId,
-      periodo: estado.periodo,
-      tipo_periodo: estado.tipo_periodo,
-      descripcion_otros: estado.descripcion_otros,
-      descripcion_descuentos: estado.descripcion_descuentos,
-      ...valoresNumericos,
-    });
+  const enviar = (e: FormEvent) => {
+    e.preventDefault();
+    const resultado = desprendibleSchema.safeParse(datos);
+    const nuevos: Errores = {};
     if (!resultado.success) {
-      const porCampo = z.flattenError(resultado.error).fieldErrors as Record<string, string[] | undefined>;
-      setErrores(Object.fromEntries(Object.entries(porCampo).map(([k, v]) => [k, v?.[0] ?? ""])));
-      return;
+      for (const issue of resultado.error.issues) {
+        const campo = issue.path[0] as keyof DesprendibleInput;
+        nuevos[campo] ??= issue.message;
+      }
     }
-    setErrores({});
-    await onEnviar(resultado.data);
+    if (!editando && !archivo) nuevos.archivo = "Adjunte el PDF del desprendible";
+    setErrores(nuevos);
+    if (Object.keys(nuevos).length || !resultado.success) return;
+    void onEnviar(resultado.data, archivo);
   };
 
-  const opcionesColaboradores = colaboradores.map((c) => ({
-    valor: c.id,
-    etiqueta: `${c.apellidos} ${c.nombres} — ${c.cedula}`,
-  }));
+  const opciones = colaboradores
+    .map((c) => ({ valor: c.id, etiqueta: `${c.nombres} ${c.apellidos}`.trim() + (c.cedula ? ` · C.C. ${c.cedula}` : "") }))
+    .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, "es"));
 
   return (
     <form onSubmit={enviar} noValidate className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="sm:col-span-3">
-          <Select
-            label="Colaborador"
-            required
-            placeholder="Seleccione un colaborador…"
-            opciones={opcionesColaboradores}
-            value={estado.colaboradorId}
-            onChange={(e) => seleccionarColaborador(e.target.value)}
-            error={errores.colaboradorId}
-            disabled={Boolean(valoresIniciales)}
-          />
-        </div>
+      <Select
+        label="Colaborador"
+        required
+        placeholder="Seleccione un colaborador"
+        opciones={opciones}
+        value={datos.colaboradorId}
+        onChange={(e) => cambiar("colaboradorId", e.target.value)}
+        error={errores.colaboradorId}
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label="Periodo"
           type="month"
           required
-          value={estado.periodo}
-          onChange={(e) => setEstado((s) => ({ ...s, periodo: e.target.value }))}
+          value={datos.periodo}
+          onChange={(e) => cambiar("periodo", e.target.value)}
           error={errores.periodo}
         />
         <Select
           label="Tipo de periodo"
           required
           opciones={TIPOS_PERIODO}
-          value={estado.tipo_periodo}
-          onChange={(e) => cambiarTipo(e.target.value)}
+          value={datos.tipo_periodo}
+          onChange={(e) => cambiar("tipo_periodo", e.target.value as TipoPeriodo)}
           error={errores.tipo_periodo}
         />
       </div>
 
-      <fieldset className="space-y-3">
-        <legend className="text-sm font-semibold text-acento">Devengados</legend>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {CAMPOS_DEVENGADOS.map(({ clave, etiqueta, ayuda }) => (
-            <Input
-              key={clave}
-              label={etiqueta}
-              inputMode="decimal"
-              value={estado.numeros[clave]}
-              onChange={(e) => cambiarNumero(clave, e.target.value)}
-              error={errores[clave]}
-              ayuda={ayuda}
-            />
-          ))}
+      {editando && valoresIniciales?.tieneArchivo && !archivo ? (
+        <p className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm text-texto-suave">
+          <FileText className="h-4 w-4 shrink-0 text-acento" aria-hidden />
+          <span className="min-w-0 truncate">
+            Archivo actual: <span className="font-medium text-texto">{valoresIniciales.nombre_archivo || "desprendible.pdf"}</span>
+          </span>
+        </p>
+      ) : null}
+
+      {archivo ? (
+        <div className="flex items-center gap-3 rounded-xl border border-borde bg-white px-4 py-3">
+          <FileText className="h-6 w-6 shrink-0 text-acento" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-texto">{archivo.name}</p>
+            <p className="text-xs text-texto-suave">{formatTamano(archivo.size)}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setArchivo(null)}
+            className="rounded-lg p-1.5 text-texto-suave hover:bg-slate-100 hover:text-error"
+            aria-label="Quitar archivo"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        <Textarea
-          label="Descripción de otros devengados"
-          rows={2}
-          value={estado.descripcion_otros}
-          onChange={(e) => setEstado((s) => ({ ...s, descripcion_otros: e.target.value }))}
+      ) : (
+        <ZonaArchivos
+          onArchivos={elegirArchivo}
+          titulo={editando ? "Reemplazar el PDF (opcional)" : undefined}
+          error={errores.archivo}
         />
-      </fieldset>
+      )}
 
-      <fieldset className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <legend className="text-sm font-semibold text-acento">Deducciones</legend>
-          <Button variante="ghost" tamano="sm" onClick={calcularAportes}>
-            <Calculator className="h-4 w-4" aria-hidden />
-            Calcular salud y pensión (4%)
-          </Button>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {CAMPOS_DEDUCCIONES.map(({ clave, etiqueta }) => (
-            <Input
-              key={clave}
-              label={etiqueta}
-              inputMode="decimal"
-              value={estado.numeros[clave]}
-              onChange={(e) => cambiarNumero(clave, e.target.value)}
-              error={errores[clave]}
-            />
-          ))}
-        </div>
-        <Textarea
-          label="Descripción de otros descuentos"
-          rows={2}
-          value={estado.descripcion_descuentos}
-          onChange={(e) => setEstado((s) => ({ ...s, descripcion_descuentos: e.target.value }))}
-        />
-      </fieldset>
-
-      <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-50 p-4 text-center text-sm">
-        <div>
-          <p className="text-xs text-texto-suave">Total devengado</p>
-          <p className="font-semibold tabular-nums">{formatCurrency(liquidacion.totalDevengado)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-texto-suave">Total deducciones</p>
-          <p className="font-semibold tabular-nums">{formatCurrency(liquidacion.totalDeducciones)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-texto-suave">Neto a pagar</p>
-          <p className="font-bold text-acento tabular-nums">{formatCurrency(liquidacion.netoAPagar)}</p>
-        </div>
-      </div>
-
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        {onCancelar ? (
-          <Button variante="secondary" onClick={onCancelar} disabled={enviando}>
-            Cancelar
-          </Button>
-        ) : null}
+      <div className="flex flex-col-reverse gap-2 border-t border-borde pt-4 sm:flex-row sm:justify-end">
+        <Button variante="secondary" onClick={onCancelar} disabled={enviando}>
+          Cancelar
+        </Button>
         <Button type="submit" cargando={enviando}>
-          {!enviando ? <Save className="h-4 w-4" aria-hidden /> : null}
-          {valoresIniciales ? "Guardar cambios" : "Crear desprendible"}
+          {editando ? "Guardar cambios" : "Subir desprendible"}
         </Button>
       </div>
     </form>

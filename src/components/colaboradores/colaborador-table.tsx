@@ -32,7 +32,7 @@ export function ColaboradorTable({ colaboradores, cargando = false, accionVacio 
     <Table>
       <TableHeader>
         <tr>
-          <TableHead>Cédula</TableHead>
+          <TableHead>Documento</TableHead>
           <TableHead>Nombre</TableHead>
           <TableHead className="hidden md:table-cell">Cargo</TableHead>
           <TableHead className="hidden sm:table-cell">Área</TableHead>
@@ -48,7 +48,10 @@ export function ColaboradorTable({ colaboradores, cargando = false, accionVacio 
             const nombre = `${c.nombres} ${c.apellidos}`;
             return (
               <TableRow key={c.id}>
-                <TableCell className="font-mono text-xs sm:text-sm">{c.cedula}</TableCell>
+                <TableCell className="font-mono text-xs sm:text-sm">
+                  {c.tipo_documento !== "CC" ? <span className="mr-1 text-texto-suave">{c.tipo_documento}</span> : null}
+                  {c.cedula}
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-acento-suave text-xs font-semibold text-acento sm:flex">

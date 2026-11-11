@@ -13,6 +13,13 @@ import { useColaboradores } from "@/hooks/use-colaboradores";
 import { useDesprendibles } from "@/hooks/use-desprendibles";
 import { cn, formatDate, formatNumber, formatPeriodo, periodoActual } from "@/lib/utils";
 
+/** Tonos del sistema: Verde Palma (principal), Naranja Sol (actividad del mes), Oro Ala (certificados). */
+const TONOS = {
+  palma: "bg-acento-suave text-acento",
+  sol: "bg-sol-suave text-sol-oscuro",
+  oro: "bg-oro-suave text-oro-oscuro",
+} as const;
+
 function TarjetaContador({
   titulo,
   valor,
@@ -20,6 +27,7 @@ function TarjetaContador({
   icono: Icono,
   cargando,
   href,
+  tono = "palma",
 }: {
   titulo: string;
   valor: number | undefined;
@@ -27,20 +35,21 @@ function TarjetaContador({
   icono: LucideIcon;
   cargando: boolean;
   href: string;
+  tono?: keyof typeof TONOS;
 }) {
   return (
     <Link href={href} className="group">
-      <Card className="transition-shadow group-hover:shadow-md">
+      <Card className="transition-all group-hover:-translate-y-0.5 group-hover:border-borde-fuerte group-hover:shadow-md">
         <CardContent className="flex items-center gap-4 py-5">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-acento-suave">
-            <Icono className="h-6 w-6 text-acento" aria-hidden />
+          <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-lg", TONOS[tono])}>
+            <Icono className="h-6 w-6" aria-hidden />
           </div>
           <div className="min-w-0">
             <p className="text-sm text-texto-suave">{titulo}</p>
             {cargando ? (
               <div className="mt-1 h-7 w-16 animate-pulse rounded bg-slate-200" />
             ) : (
-              <p className="text-2xl font-bold text-texto tabular-nums">{formatNumber(valor ?? 0)}</p>
+              <p className="font-display text-3xl font-bold tracking-tight text-texto tabular-nums">{formatNumber(valor ?? 0)}</p>
             )}
             <p className="truncate text-xs text-texto-suave">{detalle}</p>
           </div>
@@ -54,7 +63,7 @@ function AccesoRapido({ href, icono: Icono, titulo, descripcion }: { href: strin
   return (
     <Link
       href={href}
-      className="flex items-start gap-3 rounded-lg border border-borde bg-white p-4 shadow-sm transition-all hover:border-acento hover:shadow-md"
+      className="flex items-start gap-3 rounded-xl border border-borde bg-white p-4 transition-all hover:border-acento hover:shadow-md"
     >
       <Icono className="mt-0.5 h-5 w-5 shrink-0 text-acento" aria-hidden />
       <div>
@@ -77,8 +86,8 @@ export default function DashboardAdmin() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-texto">Hola, {usuario?.nombre.split(" ")[0] ?? "administrador"}</h2>
-        <p className="text-sm text-texto-suave">Resumen de la nómina · {formatPeriodo(periodo)}</p>
+        <h2 className="font-display text-3xl font-extrabold tracking-tight text-texto sm:text-4xl">Hola, {usuario?.nombre.split(" ")[0] ?? "administrador"}</h2>
+        <p className="mt-1 font-mono text-xs text-texto-suave">Documentos de colaboradores · {formatPeriodo(periodo)}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -95,6 +104,7 @@ export default function DashboardAdmin() {
           valor={desprendiblesMes.data?.total}
           detalle={formatPeriodo(periodo)}
           icono={FileText}
+          tono="sol"
           cargando={desprendiblesMes.isLoading}
           href="/admin/desprendibles"
         />
@@ -103,6 +113,7 @@ export default function DashboardAdmin() {
           valor={certificados.data?.total}
           detalle="Histórico total"
           icono={Award}
+          tono="oro"
           cargando={certificados.isLoading}
           href="/admin/certificados"
         />
@@ -113,9 +124,9 @@ export default function DashboardAdmin() {
           Accesos rápidos
         </h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <AccesoRapido href="/admin/colaboradores/nuevo" icono={UserPlus} titulo="Nuevo colaborador" descripcion="Registrar datos personales y de nómina" />
-          <AccesoRapido href="/admin/desprendibles/cargar" icono={FileUp} titulo="Cargue masivo" descripcion="Subir desprendibles desde Excel o CSV" />
-          <AccesoRapido href="/admin/desprendibles" icono={FileText} titulo="Desprendibles" descripcion="Consultar y crear desprendibles" />
+          <AccesoRapido href="/admin/colaboradores/nuevo" icono={UserPlus} titulo="Nuevo colaborador" descripcion="Registrar datos personales y laborales" />
+          <AccesoRapido href="/admin/desprendibles/cargar" icono={FileUp} titulo="Cargue masivo" descripcion="Subir los PDF de un periodo" />
+          <AccesoRapido href="/admin/desprendibles" icono={FileText} titulo="Desprendibles" descripcion="Consultar y subir desprendibles" />
           <AccesoRapido href="/admin/certificados" icono={Award} titulo="Certificados" descripcion="Generar certificados laborales" />
         </div>
       </section>
@@ -149,7 +160,7 @@ export default function DashboardAdmin() {
                       <p className="text-xs text-texto-suave">C.C. {c.colaboradorCedula}</p>
                     </TableCell>
                     <TableCell>
-                      <Badge variante={c.tipo === "Laboral" ? "default" : "warning"}>{c.tipo}</Badge>
+                      <Badge variante={c.tipo === "Laboral" ? "oro" : "warning"}>{c.tipo}</Badge>
                     </TableCell>
                     <TableCell className={cn("hidden sm:table-cell")}>{formatDate(c.fecha_generacion)}</TableCell>
                   </TableRow>

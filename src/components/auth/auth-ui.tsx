@@ -16,9 +16,11 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
 
 /*
- * Primitivas visuales de las pantallas de autenticación (con modo oscuro).
- * Contraste verificado WCAG 2.1 AA: texto #0f172a/#475569 sobre blanco y #f1f5f9/#cbd5e1 sobre #0f172a;
- * botón blanco sobre #1e40af (8.6:1) / #2563eb (5.2:1).
+ * Primitivas visuales de las pantallas de autenticación — Sistema de Diseño JMC v2, con modo oscuro.
+ * "slate" está redefinido en globals.css con los neutros cálidos (Arena → Tinta).
+ * Contraste WCAG 2.1 AA: Tinta #2B2D2C sobre blanco (14:1), Piedra #6B6862 sobre blanco (5.5:1),
+ * blanco sobre Verde Palma #2E6B3F (6.4:1); en oscuro, Arena #FAF8F4 sobre Tinta (13:1)
+ * y Palma 400 #7FB08C sobre Tinta (5.6:1).
  */
 
 // ─── Tarjeta ──────────────────────────────────────────────────────────
@@ -37,15 +39,19 @@ export function TarjetaAuth({
   return (
     <section
       aria-labelledby="titulo-auth"
-      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none"
+      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_30px_60px_-30px_rgba(43,45,44,0.25)] sm:p-8 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none"
     >
       <header className="mb-6">
         {icono ? (
-          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-palma-100 text-palma-600 dark:bg-palma-950 dark:text-palma-300">
             {icono}
           </div>
         ) : null}
-        <h1 id="titulo-auth" tabIndex={-1} className="text-xl font-semibold text-slate-900 outline-none dark:text-slate-50">
+        <h1
+          id="titulo-auth"
+          tabIndex={-1}
+          className="font-display text-2xl font-bold tracking-tight text-slate-900 outline-none dark:text-slate-50"
+        >
           {titulo}
         </h1>
         {descripcion ? <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-300">{descripcion}</p> : null}
@@ -99,12 +105,13 @@ export const CampoAuth = forwardRef<HTMLInputElement, CampoAuthProps>(function C
             onKeyUp?.(e);
           }}
           className={cn(
-            "block h-11 w-full rounded-lg border bg-white px-3 text-base text-slate-900 shadow-sm transition-colors sm:text-sm",
-            "placeholder:text-slate-400 focus:outline-none focus:ring-2",
+            // Foco del sistema: borde 1.5px Verde Palma + halo de 4px
+            "block h-11 w-full rounded-lg border bg-white px-3 text-base text-slate-900 transition-[border-color,box-shadow] sm:text-sm",
+            "placeholder:text-slate-400 focus:outline-none focus:ring-4",
             "dark:bg-slate-950 dark:text-slate-50 dark:placeholder:text-slate-500",
             error
-              ? "border-red-600 focus:border-red-600 focus:ring-red-600/25 dark:border-red-400 dark:focus:ring-red-400/30"
-              : "border-slate-300 focus:border-blue-700 focus:ring-blue-700/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/25",
+              ? "border-error focus:border-error focus:ring-error/15 dark:border-red-400 dark:focus:ring-red-400/25"
+              : "border-slate-300 focus:border-palma-600 focus:shadow-[0_0_0_0.5px_var(--color-palma-600)] focus:ring-palma-100 dark:border-slate-700 dark:focus:border-palma-400 dark:focus:ring-palma-400/20",
             conmutarVisibilidad && "pr-11",
             className,
           )}
@@ -117,7 +124,7 @@ export const CampoAuth = forwardRef<HTMLInputElement, CampoAuthProps>(function C
             aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
             aria-pressed={visible}
             aria-controls={id}
-            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-500 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-700 dark:text-slate-400 dark:hover:text-slate-100"
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-500 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-palma-600 dark:text-slate-400 dark:hover:text-slate-100"
           >
             {visible ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
           </button>
@@ -132,7 +139,7 @@ export const CampoAuth = forwardRef<HTMLInputElement, CampoAuthProps>(function C
             animate={{ opacity: 1, y: 0 }}
             exit={reducir ? undefined : { opacity: 0, y: -4 }}
             transition={{ duration: 0.15 }}
-            className="flex items-start gap-1.5 text-sm text-red-700 dark:text-red-400"
+            className="flex items-start gap-1.5 text-sm text-error dark:text-red-400"
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <span>{error}</span>
@@ -140,7 +147,7 @@ export const CampoAuth = forwardRef<HTMLInputElement, CampoAuthProps>(function C
         ) : null}
       </AnimatePresence>
       {mayusculas ? (
-        <p id={idMayus} className="text-xs font-medium text-amber-700 dark:text-amber-400">
+        <p id={idMayus} className="text-xs font-medium text-sol-oscuro dark:text-sol-claro">
           Bloq Mayús está activado
         </p>
       ) : null}
@@ -171,8 +178,8 @@ export function BotonAuth({
       aria-disabled={disabled || cargando || undefined}
       className={cn(
         "inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition-colors",
-        "bg-blue-800 hover:bg-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800",
-        "dark:bg-blue-600 dark:hover:bg-blue-500 dark:focus-visible:outline-blue-400",
+        "bg-palma-600 hover:bg-palma-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-palma-600",
+        "dark:bg-palma-600 dark:hover:bg-palma-700 dark:focus-visible:outline-palma-400",
         "disabled:cursor-not-allowed disabled:opacity-70",
         className,
       )}
@@ -194,15 +201,16 @@ export function BotonAuth({
 
 const ESTILOS_ALERTA = {
   error: {
-    clase: "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/60 dark:text-red-200",
+    clase: "border-error/25 bg-error/[0.07] text-[#8f2a21] dark:border-error/50 dark:bg-error/20 dark:text-red-200",
     icono: AlertCircle,
   },
   exito: {
-    clase: "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/60 dark:text-green-200",
+    clase: "border-palma-200 bg-palma-100 text-palma-800 dark:border-palma-800 dark:bg-palma-950/60 dark:text-palma-100",
     icono: CheckCircle2,
   },
+  // Avisos con Naranja Sol (p. ej. "tu sesión expiró")
   info: {
-    clase: "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-900 dark:bg-blue-950/60 dark:text-blue-100",
+    clase: "border-sol/30 bg-sol-suave text-sol-oscuro dark:border-sol/40 dark:bg-sol/15 dark:text-sol-claro",
     icono: Info,
   },
 } as const;

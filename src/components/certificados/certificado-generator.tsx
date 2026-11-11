@@ -8,8 +8,7 @@ import { Select } from "@/components/ui/select";
 import { useGenerarCertificado } from "@/hooks/use-certificados";
 import { useToast } from "@/hooks/use-toast";
 import { mensajeDeError } from "@/lib/api-cliente";
-import type { Certificado, TipoCertificado } from "@/types/certificado";
-import { TIPOS_CERTIFICADO } from "@/types/certificado";
+import type { Certificado } from "@/types/certificado";
 import type { Colaborador } from "@/types/colaborador";
 
 interface CertificadoGeneratorProps {
@@ -22,7 +21,7 @@ interface CertificadoGeneratorProps {
   onGenerado?: (certificado: Certificado) => void;
 }
 
-/** Formulario para generar certificados laborales o de ingresos y retenciones. */
+/** Formulario para generar certificados laborales con los datos del colaborador. */
 export function CertificadoGenerator({
   colaboradores = [],
   colaboradorFijoId,
@@ -31,14 +30,10 @@ export function CertificadoGenerator({
 }: CertificadoGeneratorProps) {
   const toast = useToast();
   const generar = useGenerarCertificado();
-  const [anioAnterior] = useState(() => new Date().getFullYear() - 1);
 
   const [colaboradorId, setColaboradorId] = useState(colaboradorFijoId ?? "");
-  const [tipo, setTipo] = useState<TipoCertificado>("Laboral");
-  const [incluirSalario, setIncluirSalario] = useState(true);
   const [dirigidoA, setDirigidoA] = useState("A QUIEN INTERESE");
   const [textoAdicional, setTextoAdicional] = useState("");
-  const [anio, setAnio] = useState(String(anioAnterior));
   const [error, setError] = useState("");
   const [ultimo, setUltimo] = useState<Certificado | null>(null);
 
@@ -52,21 +47,17 @@ export function CertificadoGenerator({
     try {
       const certificado = await generar.mutateAsync({
         colaboradorId,
-        tipo,
-        incluirSalario,
+        tipo: "Laboral",
         dirigidoA: dirigidoA.trim(),
         textoAdicional: permitirTextoAdicional ? textoAdicional.trim() : "",
-        anio: tipo === "Ingresos y retenciones" ? Number(anio) : undefined,
       });
       setUltimo(certificado);
-      toast.success("Certificado generado", { descripcion: `${certificado.tipo} · ${certificado.colaboradorNombre}` });
+      toast.success("Certificado generado", { descripcion: certificado.colaboradorNombre });
       onGenerado?.(certificado);
     } catch (err) {
       toast.error("No fue posible generar el certificado", { descripcion: mensajeDeError(err) });
     }
   };
-
-  const anios = Array.from({ length: 6 }, (_, i) => String(anioAnterior + 1 - i));
 
   return (
     <form onSubmit={enviar} className="space-y-4" noValidate>
@@ -82,37 +73,13 @@ export function CertificadoGenerator({
         />
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Select
-          label="Tipo de certificado"
-          opciones={TIPOS_CERTIFICADO}
-          value={tipo}
-          onChange={(e) => setTipo(e.target.value as TipoCertificado)}
-        />
-        {tipo === "Ingresos y retenciones" ? (
-          <Select label="Año gravable" opciones={anios} value={anio} onChange={(e) => setAnio(e.target.value)} />
-        ) : (
-          <Input
-            label="Dirigido a"
-            value={dirigidoA}
-            maxLength={150}
-            onChange={(e) => setDirigidoA(e.target.value)}
-            placeholder="A QUIEN INTERESE"
-          />
-        )}
-      </div>
-
-      {tipo === "Laboral" ? (
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={incluirSalario}
-            onChange={(e) => setIncluirSalario(e.target.checked)}
-            className="h-4 w-4 rounded accent-acento"
-          />
-          Incluir salario en el certificado
-        </label>
-      ) : null}
+      <Input
+        label="Dirigido a"
+        value={dirigidoA}
+        maxLength={150}
+        onChange={(e) => setDirigidoA(e.target.value)}
+        placeholder="A QUIEN INTERESE"
+      />
 
       {permitirTextoAdicional ? (
         <Textarea

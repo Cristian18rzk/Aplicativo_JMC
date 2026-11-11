@@ -51,7 +51,7 @@ export function SearchInput({
         onChange={(e) => setValor(e.target.value)}
         placeholder={placeholder}
         aria-label={ariaLabel}
-        className={cn(clasesCampo(false), "h-10 pr-9 pl-9 [&::-webkit-search-cancel-button]:hidden")}
+        className={cn(clasesCampo(false), "h-11 pr-9 pl-9 [&::-webkit-search-cancel-button]:hidden")}
       />
       {valor ? (
         <button

@@ -1,39 +1,108 @@
 @import "tailwindcss";
 
-/* Paleta del aplicativo JMC */
+/*
+ * Sistema de Diseño JMC v2 — "Sale el sol, llega el pago."
+ * Sol, palma y alas del logo convertidos en color, letra y forma.
+ *   Verde Palma (primario) · Naranja Sol (acento) · Oro Ala (distinción) · neutros cálidos.
+ */
 :root {
-  --acento: #1e40af;
-  --acento-hover: #1e3a8a;
-  --acento-suave: #dbeafe;
-  --texto: #1e293b;
-  --texto-suave: #64748b;
-  --fondo: #f8fafc;
+  /* Verde Palma: acciones, navegación activa y el neto a pagar */
+  --acento: #2e6b3f;
+  --acento-hover: #1f4d2c;
+  --acento-suave: #eaf3ec;
+  /* Naranja Sol: avisos, pendientes y momentos de energía */
+  --sol: #e8782a;
+  --sol-claro: #f2a042;
+  --sol-suave: #fdeee0;
+  --sol-oscuro: #b4520f;
+  /* Oro Ala: certificados, sellos y filetes de documento */
+  --oro: #b8955a;
+  --oro-claro: #d9be8a;
+  --oro-suave: #f5eee2;
+  --oro-oscuro: #8a6b37;
+  /* Neutros */
+  --texto: #2b2d2c; /* Tinta */
+  --texto-suave: #6b6862; /* Piedra */
+  --fondo: #faf8f4; /* Arena */
   --superficie: #ffffff;
-  --borde: #e2e8f0;
-  --exito: #16a34a;
-  --error: #dc2626;
-  --alerta: #f59e0b;
+  --borde: #e6e1d8; /* Línea */
+  --borde-fuerte: #d6d0c4;
+  --exito: #2e6b3f;
+  --error: #b3362b;
+  --alerta: #e8782a;
 }
 
 @theme inline {
   --color-acento: var(--acento);
   --color-acento-hover: var(--acento-hover);
   --color-acento-suave: var(--acento-suave);
+  --color-sol: var(--sol);
+  --color-sol-claro: var(--sol-claro);
+  --color-sol-suave: var(--sol-suave);
+  --color-sol-oscuro: var(--sol-oscuro);
+  --color-oro: var(--oro);
+  --color-oro-claro: var(--oro-claro);
+  --color-oro-suave: var(--oro-suave);
+  --color-oro-oscuro: var(--oro-oscuro);
   --color-texto: var(--texto);
   --color-texto-suave: var(--texto-suave);
   --color-fondo: var(--fondo);
   --color-superficie: var(--superficie);
   --color-borde: var(--borde);
+  --color-borde-fuerte: var(--borde-fuerte);
   --color-exito: var(--exito);
   --color-error: var(--error);
   --color-alerta: var(--alerta);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Interfaz → Figtree · Títulos → Rubik · Códigos → JetBrains Mono */
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-rubik), var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
   --animate-aparecer: aparecer 150ms ease-out;
   --animate-subir: subir 200ms ease-out;
   --animate-deslizar-derecha: deslizar-derecha 250ms ease-out;
   --animate-deslizar-izquierda: deslizar-izquierda 250ms ease-out;
+  /* Portada: el sol sale detrás de la franja verde */
+  --animate-amanecer: amanecer 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@theme {
+  /*
+   * Neutros cálidos: la escala "slate" de Tailwind se redefine con los tonos del sistema
+   * (Arena → Línea → Piedra → Tinta), así todos los grises de la interfaz quedan cálidos.
+   */
+  --color-slate-50: #faf8f4;
+  --color-slate-100: #f3f0ea;
+  --color-slate-200: #e6e1d8;
+  --color-slate-300: #d6d0c4;
+  --color-slate-400: #9a958c;
+  --color-slate-500: #7d7972;
+  --color-slate-600: #6b6862;
+  --color-slate-700: #55524c;
+  --color-slate-800: #3a3c3b;
+  --color-slate-900: #2b2d2c;
+  --color-slate-950: #1e201f;
+
+  /* Verde Palma */
+  --color-palma-50: #f3f8f4;
+  --color-palma-100: #eaf3ec;
+  --color-palma-200: #cfe3d4;
+  --color-palma-300: #a7cbb0;
+  --color-palma-400: #7fb08c;
+  --color-palma-500: #4f8c60;
+  --color-palma-600: #2e6b3f;
+  --color-palma-700: #265a35;
+  --color-palma-800: #1f4d2c;
+  --color-palma-900: #173a21;
+  --color-palma-950: #0e2414;
+
+  /* Radios "equilibrado": 6 pequeño · 10 control · 16 tarjeta · 24 modal (0 en documentos) */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
 }
 
 @keyframes aparecer {
@@ -67,6 +136,16 @@
   }
 }
 
+/* Solo eje Y: el centrado horizontal (-translate-x-1/2) usa la propiedad `translate` y se combina */
+@keyframes amanecer {
+  from {
+    transform: translateY(85%);
+  }
+  to {
+    transform: translateY(38%);
+  }
+}
+
 @keyframes deslizar-izquierda {
   from {
     transform: translateX(-100%);
@@ -86,7 +165,6 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Bordes por defecto con el color de la paleta */
 @layer base {
   *,
   ::after,
@@ -94,9 +172,26 @@ body {
     border-color: var(--borde);
   }
 
+  /* Títulos en Rubik, con el tracking ajustado del sistema */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /* Cifras tabulares por defecto en tablas (pesos alineados) */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
   :focus-visible {
     outline: 2px solid var(--acento);
     outline-offset: 2px;
+  }
+
+  ::placeholder {
+    color: #9a958c;
   }
 }
 

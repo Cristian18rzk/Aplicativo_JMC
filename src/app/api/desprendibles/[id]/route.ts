@@ -1,8 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
+import * as colaboradoresDb from "@/lib/airtable/colaboradores";
 import * as desprendiblesDb from "@/lib/airtable/desprendibles";
-import { ErrorApi, leerJson, manejarErrorApi, soloClavesPresentes, validarIdRegistro } from "@/lib/api";
+import { nombreDelUsuario } from "@/lib/airtable/usuarios";
+import { ErrorApi, manejarErrorApi, validarIdRegistro } from "@/lib/api";
+import { leerFormulario, leerPdf } from "@/lib/archivos";
 import { requerirAdmin, requerirSesion, verificarAccesoPropio } from "@/lib/auth/middleware";
 import { actualizarDesprendibleSchema } from "@/lib/validators/desprendible";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 interface Contexto {
   params: Promise<{ id: string }>;
@@ -22,17 +28,33 @@ export async function GET(request: NextRequest, { params }: Contexto) {
   }
 }
 
-/** PUT /api/desprendibles/[id] — Actualiza un desprendible (solo admin). */
+/**
+ * PUT /api/desprendibles/[id] — Cambia colaborador, periodo o tipo y, opcionalmente, reemplaza el PDF
+ * (solo admin). multipart/form-data con los campos a cambiar y `archivo` opcional.
+ */
 export async function PUT(request: NextRequest, { params }: Contexto) {
   try {
-    await requerirAdmin(request);
+    const admin = await requerirAdmin(request);
     const id = validarIdRegistro((await params).id);
-    const cuerpo = await leerJson(request);
-    const datos = soloClavesPresentes(actualizarDesprendibleSchema.parse(cuerpo), cuerpo);
-    if (Object.keys(datos).length === 0) throw new ErrorApi(400, "No hay campos para actualizar");
+    const formulario = await leerFormulario(request);
+
+    const presentes = Object.fromEntries(
+      ["colaboradorId", "periodo", "tipo_periodo"]
+        .filter((campo) => formulario.has(campo))
+        .map((campo) => [campo, formulario.get(campo)]),
+    );
+    const datos = actualizarDesprendibleSchema.parse(presentes);
+    const archivo = await leerPdf(formulario, "archivo", false);
+    if (Object.keys(datos).length === 0 && !archivo) throw new ErrorApi(400, "No hay cambios para guardar");
 
     const existente = await desprendiblesDb.getById(id);
     if (!existente) throw new ErrorApi(404, "Desprendible no encontrado");
+
+    if (datos.colaboradorId && datos.colaboradorId !== existente.colaboradorId) {
+      if (!(await colaboradoresDb.getById(datos.colaboradorId))) {
+        throw new ErrorApi(404, "El colaborador seleccionado no existe");
+      }
+    }
 
     const colaboradorId = datos.colaboradorId ?? existente.colaboradorId;
     const periodo = datos.periodo ?? existente.periodo;
@@ -41,14 +63,15 @@ export async function PUT(request: NextRequest, { params }: Contexto) {
       throw new ErrorApi(409, `Ya existe otro desprendible ${tipo} del periodo ${periodo} para este colaborador`);
     }
 
-    const desprendible = await desprendiblesDb.update(id, datos);
+    const cargadoPor = archivo ? await nombreDelUsuario(admin.usuarioId) : undefined;
+    const desprendible = await desprendiblesDb.update(id, datos, archivo, cargadoPor);
     return NextResponse.json(desprendible);
   } catch (error) {
     return manejarErrorApi(error);
   }
 }
 
-/** DELETE /api/desprendibles/[id] — Elimina un desprendible (solo admin). */
+/** DELETE /api/desprendibles/[id] — Elimina el desprendible y su archivo (solo admin). */
 export async function DELETE(request: NextRequest, { params }: Contexto) {
   try {
     await requerirAdmin(request);

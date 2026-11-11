@@ -1,7 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import { registrarEventoAuth } from "@/lib/airtable/auth-logs";
-import { actualizarUsuario, getUsuarioPorEmail, type UsuarioAuth } from "@/lib/airtable/usuarios";
+import { actualizarUsuario, getUsuarioPorCedula, type UsuarioAuth } from "@/lib/airtable/usuarios";
 import {
   BLOQUEO_TEMPORAL_MS,
   DELAY_MAXIMO_MS,
@@ -15,19 +15,21 @@ import { compararSenuelo, verificarPassword } from "./password";
 import * as rateLimit from "./rate-limit";
 import { esperar } from "./request";
 import { cuentaHabilitada } from "./sesiones";
-import { claveEmail } from "./tokens";
+import { claveIdentificador } from "./tokens";
 
 export type ResultadoLogin =
   | { ok: true; usuario: UsuarioAuth }
-  /** "credenciales" cubre TODOS los fallos de cuenta (inexistente, bloqueada, inactiva, clave errada). */
-  | { ok: false; motivo: "credenciales" | "limite_ip" };
+  /** PIN temporal correcto y vigente: debe crear su PIN propio antes de tener sesión. */
+  | { ok: false; motivo: "cambiar_pin"; usuario: UsuarioAuth }
+  /** "credenciales" cubre TODOS los fallos de cuenta (inexistente, bloqueada, inactiva, PIN errado). */
+  | { ok: false; motivo: "credenciales" | "limite_ip" | "pin_vencido" };
 
 interface Contexto {
   ip: string;
   userAgent: string;
 }
 
-/** La auditoría se escribe después de responder: así la latencia no depende de si el email existe. */
+/** La auditoría se escribe después de responder: así la latencia no depende de si la cédula existe. */
 const auditar = (datos: Parameters<typeof registrarEventoAuth>[0]) => after(() => registrarEventoAuth(datos));
 
 /** Delay progresivo según los fallos recientes: 0, 1s, 2s, 4s, 8s, 16s (tope). */
@@ -39,7 +41,7 @@ function calcularDelay(fallosPrevios: number): number {
 /**
  * Registra un fallo en la cuenta (persistido en Airtable).
  * - 5 fallos dentro de 15 minutos → bloqueo de 30 minutos.
- * - 10 fallos acumulados desde el último login exitoso → bloqueo permanente (desbloqueo manual por admin).
+ * - 10 fallos acumulados desde el último ingreso exitoso → bloqueo hasta que el admin genere un PIN temporal.
  */
 async function registrarFalloCuenta(usuario: UsuarioAuth, ctx: Contexto): Promise<void> {
   const ahora = Date.now();
@@ -68,16 +70,16 @@ async function registrarFalloCuenta(usuario: UsuarioAuth, ctx: Contexto): Promis
   if (cambios.lockedPermanently) {
     await registrarEventoAuth({
       evento: "cuenta_bloqueada_permanente",
-      email: usuario.email,
+      cedula: usuario.cedula,
       usuarioId: usuario.id,
       ...ctx,
       exito: false,
-      detalle: `${totalFallos} intentos fallidos acumulados. Requiere desbloqueo manual por un administrador.`,
+      detalle: `${totalFallos} intentos fallidos acumulados. Se desbloquea cuando el admin genere un PIN temporal.`,
     });
   } else if (cambios.lockedUntil) {
     await registrarEventoAuth({
       evento: "cuenta_bloqueada",
-      email: usuario.email,
+      cedula: usuario.cedula,
       usuarioId: usuario.id,
       ...ctx,
       exito: false,
@@ -87,77 +89,76 @@ async function registrarFalloCuenta(usuario: UsuarioAuth, ctx: Contexto): Promis
 }
 
 /**
- * Valida credenciales. Todas las respuestas negativas son indistinguibles para el cliente
- * ("Credenciales inválidas") y tardan lo mismo, exista o no el email.
+ * Valida cédula + secreto (PIN, PIN temporal o contraseña del admin). Todas las respuestas negativas
+ * de cuenta son indistinguibles para el cliente ("Credenciales inválidas") y tardan lo mismo, exista
+ * o no la cédula. Solo quien acierta el PIN temporal recibe una respuesta distinta.
  */
-export async function autenticar(emailEntrada: string, password: string, ctx: Contexto): Promise<ResultadoLogin> {
-  const email = emailEntrada.trim().toLowerCase();
-
+export async function autenticar(cedula: string, password: string, ctx: Contexto): Promise<ResultadoLogin> {
   // 1) Límite por IP: 20 intentos cada 15 minutos (exitosos o no)
   const limiteIp = await rateLimit.consumir(`login-ip:${ctx.ip}`, MAX_LOGINS_POR_IP, VENTANA_LOGINS_IP_MS);
   if (!limiteIp.permitido) {
     // Solo se registra al cruzar el umbral, para no inundar la auditoría durante un ataque
     if (limiteIp.conteo === MAX_LOGINS_POR_IP + 1) {
-      auditar({ evento: "rate_limit_ip", email, ...ctx, exito: false, detalle: "Límite de logins por IP" });
+      auditar({ evento: "rate_limit_ip", cedula, ...ctx, exito: false, detalle: "Límite de logins por IP" });
     }
     return { ok: false, motivo: "limite_ip" };
   }
 
-  // 2) Delay progresivo por email (se aplica también a emails inexistentes, para no delatarlos)
-  const claveFallos = `login-fail:${claveEmail(email)}`;
+  // 2) Delay progresivo por cédula (se aplica también a cédulas inexistentes, para no delatarlas)
+  const claveFallos = `login-fail:${claveIdentificador(cedula)}`;
   await esperar(calcularDelay(await rateLimit.contar(claveFallos)));
 
-  const usuario = await getUsuarioPorEmail(email);
+  const usuario = await getUsuarioPorCedula(cedula);
 
-  // 3) Email inexistente o cuenta que aún no ha creado su contraseña
+  // 3) Cédula inexistente o cuenta que aún no ha creado su PIN (primer ingreso pendiente)
   if (!usuario || !usuario.passwordHash) {
     await compararSenuelo(password);
     await rateLimit.incrementar(claveFallos, VENTANA_FALLOS_CUENTA_MS);
     auditar({
       evento: "login_fallido",
-      email,
+      cedula,
       usuarioId: usuario?.id,
       ...ctx,
       exito: false,
-      detalle: usuario ? "Cuenta sin contraseña establecida" : "Email no registrado",
+      detalle: usuario ? "Cuenta sin PIN: debe crearlo en «Es mi primera vez»" : "Cédula no registrada",
     });
     return { ok: false, motivo: "credenciales" };
   }
 
-  // 4) Cuenta bloqueada: se compara igualmente la contraseña (mismo tiempo de respuesta) pero se rechaza
+  // 4) Cuenta bloqueada: se compara igualmente el secreto (mismo tiempo de respuesta) pero se rechaza
   const ahora = Date.now();
   if (usuario.lockedPermanently || usuario.lockedUntil > ahora) {
     await verificarPassword(password, usuario.passwordHash);
     await rateLimit.incrementar(claveFallos, VENTANA_FALLOS_CUENTA_MS);
     auditar({
       evento: "login_rechazado_bloqueo",
-      email,
+      cedula,
       usuarioId: usuario.id,
       ...ctx,
       exito: false,
       detalle: usuario.lockedPermanently
-        ? "Cuenta bloqueada permanentemente"
+        ? "Cuenta bloqueada por intentos fallidos acumulados"
         : `Cuenta bloqueada hasta ${new Date(usuario.lockedUntil).toISOString()}`,
     });
     return { ok: false, motivo: "credenciales" };
   }
 
-  // 5) Contraseña incorrecta
+  // 5) Secreto incorrecto
   const valida = await verificarPassword(password, usuario.passwordHash);
   if (!valida) {
     await rateLimit.incrementar(claveFallos, VENTANA_FALLOS_CUENTA_MS);
     after(() => registrarFalloCuenta(usuario, ctx));
-    auditar({ evento: "login_fallido", email, usuarioId: usuario.id, ...ctx, exito: false, detalle: "Contraseña incorrecta" });
+    auditar({ evento: "login_fallido", cedula, usuarioId: usuario.id, ...ctx, exito: false, detalle: "PIN o contraseña incorrecta" });
     return { ok: false, motivo: "credenciales" };
   }
 
-  // 6) Contraseña correcta pero la cuenta o la ficha del colaborador está inactiva
-  if (!(await cuentaHabilitada(usuario, ahora))) {
-    auditar({ evento: "login_fallido", email, usuarioId: usuario.id, ...ctx, exito: false, detalle: "Cuenta o colaborador inactivo" });
+  // 6) Secreto correcto pero la cuenta o la ficha del colaborador está inactiva
+  if (!(await cuentaHabilitada(usuario, ahora, { permitirCambioPendiente: true }))) {
+    auditar({ evento: "login_fallido", cedula, usuarioId: usuario.id, ...ctx, exito: false, detalle: "Cuenta o colaborador inactivo" });
     return { ok: false, motivo: "credenciales" };
   }
 
-  // 7) Éxito: se reinician los contadores
+  // 7) Acierto: se reinician los contadores
   await rateLimit.reiniciar(claveFallos);
   if (usuario.failedLoginAttempts || usuario.totalFailedAttempts || usuario.lockedUntil) {
     await actualizarUsuario(usuario.id, {
@@ -167,6 +168,16 @@ export async function autenticar(emailEntrada: string, password: string, ctx: Co
       lockedUntil: 0,
     });
   }
-  auditar({ evento: "login_exitoso", email, usuarioId: usuario.id, ...ctx, exito: true });
+
+  // 8) PIN temporal: vencido → pedir otro al admin; vigente → crear el PIN propio
+  if (usuario.debeCambiarPin) {
+    if (!usuario.pinTemporalExpira || usuario.pinTemporalExpira <= ahora) {
+      auditar({ evento: "pin_temporal_vencido", cedula, usuarioId: usuario.id, ...ctx, exito: false, detalle: "PIN temporal correcto pero vencido" });
+      return { ok: false, motivo: "pin_vencido" };
+    }
+    return { ok: false, motivo: "cambiar_pin", usuario };
+  }
+
+  auditar({ evento: "login_exitoso", cedula, usuarioId: usuario.id, ...ctx, exito: true });
   return { ok: true, usuario };
 }

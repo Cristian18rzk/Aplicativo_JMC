@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { Logo } from "@/components/ui/logo";
 import { cn, iniciales } from "@/lib/utils";
 
 export interface EnlaceNavegacion {
@@ -47,14 +48,12 @@ export function ContenidoNavegacion({
 
   return (
     <div className="flex h-full flex-col">
-      <div className={cn("flex h-16 items-center gap-3 border-b border-white/10 px-4", colapsado && "justify-center px-2")}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-sm font-bold text-acento">
-          JMC
-        </div>
+      <div className={cn("flex h-20 items-center gap-3 px-5", colapsado && "justify-center px-2")}>
+        <Logo tamano={40} decorativo={!colapsado} />
         {!colapsado ? (
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white">Aplicativo JMC</p>
-            <p className="text-xs text-blue-200">Gestión de nómina</p>
+            <p className="truncate font-display text-lg font-bold tracking-tight text-texto">JMC Nómina</p>
+            <p className="text-xs text-texto-suave">Jairo Martínez JMC S.A.S.</p>
           </div>
         ) : null}
       </div>
@@ -70,9 +69,9 @@ export function ContenidoNavegacion({
               title={colapsado ? etiqueta : undefined}
               aria-current={activo ? "page" : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
                 colapsado && "justify-center px-2",
-                activo ? "bg-white text-acento shadow-sm" : "text-blue-100 hover:bg-white/10 hover:text-white",
+                activo ? "bg-white text-palma-800 shadow-sm" : "text-slate-700 hover:bg-white/60 hover:text-texto",
               )}
             >
               <Icono className="h-5 w-5 shrink-0" aria-hidden />
@@ -82,16 +81,16 @@ export function ContenidoNavegacion({
         })}
       </nav>
 
-      <div className="border-t border-white/10 p-3">
+      <div className="border-t border-palma-200 p-3">
         {usuario ? (
           <div className={cn("mb-2 flex items-center gap-3 px-2 py-1", colapsado && "justify-center px-0")}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-900 text-xs font-semibold text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-acento text-xs font-semibold text-white">
               {iniciales(usuario.nombre)}
             </div>
             {!colapsado ? (
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-white">{usuario.nombre}</p>
-                <p className="text-xs text-blue-200">Administrador</p>
+                <p className="truncate text-sm font-semibold text-texto">{usuario.nombre}</p>
+                <p className="text-xs text-texto-suave">Administrador</p>
               </div>
             ) : null}
           </div>
@@ -102,7 +101,7 @@ export function ContenidoNavegacion({
           disabled={saliendo}
           title={colapsado ? "Cerrar sesión" : undefined}
           className={cn(
-            "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-blue-100 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-60",
+            "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-white/60 hover:text-error disabled:opacity-60",
             colapsado && "justify-center px-2",
           )}
         >
@@ -119,7 +118,7 @@ export function Sidebar({ colapsado, onAlternar }: { colapsado: boolean; onAlter
   return (
     <aside
       className={cn(
-        "sticky top-0 hidden h-screen shrink-0 flex-col bg-acento transition-[width] duration-200 lg:flex",
+        "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-palma-200 bg-acento-suave transition-[width] duration-200 lg:flex",
         colapsado ? "w-20" : "w-64",
       )}
     >

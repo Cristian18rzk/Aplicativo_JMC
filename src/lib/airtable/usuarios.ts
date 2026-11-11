@@ -21,22 +21,30 @@ import {
  */
 export interface UsuarioAuth {
   id: string;
+  /** Identificador de inicio de sesión (solo dígitos). */
+  cedula: string;
+  /** Informativo: ya no se usa para ingresar ni para recuperar el acceso. */
   email: string;
   nombre: string;
   role: Rol;
   /** ID del registro en "Colaboradores" (vacío para administradores sin ficha de colaborador). */
   colaboradorId: string;
   activo: boolean;
+  /** bcrypt del PIN, del PIN temporal o de la contraseña del admin. */
   passwordHash: string;
-  /** Hashes de las contraseñas anteriores (sin incluir la actual), la más reciente primero. */
+  /** Hashes anteriores (sin incluir el actual), el más reciente primero. */
   previousPasswordHashes: string[];
+  /** true mientras el secreto vigente sea un PIN temporal generado por el admin. */
+  debeCambiarPin: boolean;
+  pinTemporalExpira: number;
   failedLoginAttempts: number;
   failedWindowStart: number;
   totalFailedAttempts: number;
   lockedUntil: number;
   lockedPermanently: boolean;
-  resetTokenHash: string;
-  resetTokenExpires: number;
+  /** SHA-256 del token de un solo uso para crear el PIN propio (campos reset_token_* en Airtable). */
+  tokenCambioHash: string;
+  tokenCambioExpira: number;
   lastPasswordChange: number;
   createdAt: number;
 }
@@ -58,6 +66,7 @@ function mapear(registro: RegistroRest): UsuarioAuth {
   const c = registro.fields;
   return {
     id: registro.id,
+    cedula: texto(c, "cedula").replace(/\D/g, ""),
     email: texto(c, "email").toLowerCase(),
     nombre: texto(c, "nombre"),
     role: texto(c, "role") === "admin" ? "admin" : "colaborador",
@@ -65,13 +74,15 @@ function mapear(registro: RegistroRest): UsuarioAuth {
     activo: booleano(c, "activo"),
     passwordHash: texto(c, "password_hash"),
     previousPasswordHashes: leerHistorial(texto(c, "previous_password_hashes")),
+    debeCambiarPin: booleano(c, "must_change_pin"),
+    pinTemporalExpira: fechaMs(c, "temp_pin_expires"),
     failedLoginAttempts: numero(c, "failed_login_attempts"),
     failedWindowStart: fechaMs(c, "failed_window_start"),
     totalFailedAttempts: numero(c, "total_failed_attempts"),
     lockedUntil: fechaMs(c, "locked_until"),
     lockedPermanently: booleano(c, "locked_permanently"),
-    resetTokenHash: texto(c, "reset_token_hash"),
-    resetTokenExpires: fechaMs(c, "reset_token_expires"),
+    tokenCambioHash: texto(c, "reset_token_hash"),
+    tokenCambioExpira: fechaMs(c, "reset_token_expires"),
     lastPasswordChange: fechaMs(c, "last_password_change"),
     createdAt: fechaMs(c, "created_at") || new Date(registro.createdTime).getTime(),
   };
@@ -79,10 +90,13 @@ function mapear(registro: RegistroRest): UsuarioAuth {
 
 const iso = (ms: number) => (ms > 0 ? new Date(ms).toISOString() : VACIO);
 
+export type CambiosUsuario = Partial<Omit<UsuarioAuth, "id" | "createdAt">>;
+
 /** Convierte cambios parciales del modelo a campos de Airtable. */
-function aCampos(datos: Partial<Omit<UsuarioAuth, "id" | "createdAt">>): CamposAirtable {
+function aCampos(datos: CambiosUsuario): CamposAirtable {
   const campos: CamposAirtable = {};
-  if (datos.email !== undefined) campos.email = datos.email.toLowerCase();
+  if (datos.cedula !== undefined) campos.cedula = datos.cedula || VACIO;
+  if (datos.email !== undefined) campos.email = datos.email.toLowerCase() || VACIO;
   if (datos.nombre !== undefined) campos.nombre = datos.nombre;
   if (datos.role !== undefined) campos.role = datos.role;
   if (datos.colaboradorId !== undefined) campos.colaborador_id = datos.colaboradorId || VACIO;
@@ -91,20 +105,23 @@ function aCampos(datos: Partial<Omit<UsuarioAuth, "id" | "createdAt">>): CamposA
   if (datos.previousPasswordHashes !== undefined) {
     campos.previous_password_hashes = JSON.stringify(datos.previousPasswordHashes);
   }
+  if (datos.debeCambiarPin !== undefined) campos.must_change_pin = datos.debeCambiarPin;
+  if (datos.pinTemporalExpira !== undefined) campos.temp_pin_expires = iso(datos.pinTemporalExpira);
   if (datos.failedLoginAttempts !== undefined) campos.failed_login_attempts = datos.failedLoginAttempts;
   if (datos.failedWindowStart !== undefined) campos.failed_window_start = iso(datos.failedWindowStart);
   if (datos.totalFailedAttempts !== undefined) campos.total_failed_attempts = datos.totalFailedAttempts;
   if (datos.lockedUntil !== undefined) campos.locked_until = iso(datos.lockedUntil);
   if (datos.lockedPermanently !== undefined) campos.locked_permanently = datos.lockedPermanently;
-  if (datos.resetTokenHash !== undefined) campos.reset_token_hash = datos.resetTokenHash || VACIO;
-  if (datos.resetTokenExpires !== undefined) campos.reset_token_expires = iso(datos.resetTokenExpires);
+  if (datos.tokenCambioHash !== undefined) campos.reset_token_hash = datos.tokenCambioHash || VACIO;
+  if (datos.tokenCambioExpira !== undefined) campos.reset_token_expires = iso(datos.tokenCambioExpira);
   if (datos.lastPasswordChange !== undefined) campos.last_password_change = iso(datos.lastPasswordChange);
   return campos;
 }
 
-export async function getUsuarioPorEmail(email: string): Promise<UsuarioAuth | null> {
-  const normalizado = email.trim().toLowerCase();
-  const registro = await primero(TABLAS_AUTH.usuarios, `LOWER({email}) = "${escaparFormula(normalizado)}"`);
+export async function getUsuarioPorCedula(cedula: string): Promise<UsuarioAuth | null> {
+  const normalizada = cedula.replace(/\D/g, "");
+  if (!normalizada) return null;
+  const registro = await primero(TABLAS_AUTH.usuarios, `{cedula} & "" = "${escaparFormula(normalizada)}"`);
   return registro ? mapear(registro) : null;
 }
 
@@ -118,21 +135,21 @@ export async function getUsuarioPorColaborador(colaboradorId: string): Promise<U
   return registro ? mapear(registro) : null;
 }
 
-/** Busca la cuenta dueña de un token de restablecimiento (se busca por el hash SHA-256, hex). */
-export async function getUsuarioPorResetHash(hash: string): Promise<UsuarioAuth | null> {
+/** Busca la cuenta dueña de un token de cambio de PIN (se busca por el hash SHA-256, hex). */
+export async function getUsuarioPorTokenCambio(hash: string): Promise<UsuarioAuth | null> {
   if (!/^[a-f0-9]{64}$/.test(hash)) return null;
   const registro = await primero(TABLAS_AUTH.usuarios, `{reset_token_hash} = "${hash}"`);
   return registro ? mapear(registro) : null;
 }
 
 export async function crearUsuario(
-  datos: Pick<UsuarioAuth, "email" | "nombre" | "role" | "colaboradorId" | "activo"> &
-    Partial<Pick<UsuarioAuth, "passwordHash" | "lastPasswordChange">>,
+  datos: Pick<UsuarioAuth, "cedula" | "email" | "nombre" | "role" | "colaboradorId" | "activo">,
 ): Promise<UsuarioAuth> {
   const registro = await crear(TABLAS_AUTH.usuarios, {
     ...aCampos({
       ...datos,
       previousPasswordHashes: [],
+      debeCambiarPin: false,
       failedLoginAttempts: 0,
       totalFailedAttempts: 0,
       lockedPermanently: false,
@@ -142,11 +159,14 @@ export async function crearUsuario(
   return mapear(registro);
 }
 
-export async function actualizarUsuario(
-  id: string,
-  datos: Partial<Omit<UsuarioAuth, "id" | "createdAt">>,
-): Promise<UsuarioAuth> {
+export async function actualizarUsuario(id: string, datos: CambiosUsuario): Promise<UsuarioAuth> {
   return mapear(await actualizar(TABLAS_AUTH.usuarios, id, aCampos(datos)));
+}
+
+/** Nombre para dejar constancia de quién hizo una acción (el JWT solo lleva identificadores). */
+export async function nombreDelUsuario(usuarioId: string): Promise<string> {
+  const usuario = await getUsuarioPorId(usuarioId);
+  return usuario?.nombre || usuario?.cedula || "Usuario";
 }
 
 export async function eliminarUsuario(id: string): Promise<void> {

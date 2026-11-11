@@ -1,7 +1,7 @@
-import { Briefcase, Building, CalendarDays, IdCard, Mail, Phone, Wallet, type LucideIcon } from "lucide-react";
+import { Briefcase, Building, CalendarDays, IdCard, Mail, Phone, type LucideIcon } from "lucide-react";
 import { Badge, varianteEstado } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { describirAntiguedad, formatCurrency, formatDate, iniciales } from "@/lib/utils";
+import { describirAntiguedad, formatDate, iniciales } from "@/lib/utils";
 import type { Colaborador } from "@/types/colaborador";
 
 function Dato({ icono: Icono, etiqueta, valor }: { icono: LucideIcon; etiqueta: string; valor: string }) {
@@ -17,25 +17,30 @@ function Dato({ icono: Icono, etiqueta, valor }: { icono: LucideIcon; etiqueta: 
 }
 
 /** Tarjeta resumen del colaborador (dashboard del colaborador y detalle). */
-export function ColaboradorCard({ colaborador: c, mostrarSalario = true }: { colaborador: Colaborador; mostrarSalario?: boolean }) {
+export function ColaboradorCard({ colaborador: c }: { colaborador: Colaborador }) {
   const nombre = `${c.nombres} ${c.apellidos}`;
   return (
     <Card className="overflow-hidden">
-      <div className="flex items-center gap-4 bg-linear-to-r from-acento to-blue-600 px-5 py-5 text-white">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/20 text-lg font-semibold">
+      {/* Bloque Verde Palma con el sol asomando (firma visual del sistema) */}
+      <div className="relative flex items-center gap-4 overflow-hidden bg-acento px-5 py-5 text-white">
+        <div
+          className="pointer-events-none absolute -top-16 -right-10 h-40 w-40 rounded-full bg-[radial-gradient(circle,#F9C46B,#E8782A)]"
+          aria-hidden
+        />
+        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/20 font-display text-lg font-bold">
           {iniciales(nombre)}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-lg font-semibold">{nombre}</p>
-          <p className="truncate text-sm text-blue-100">{c.cargo}</p>
+        <div className="relative min-w-0 flex-1">
+          <p className="truncate font-display text-xl font-bold tracking-tight">{nombre}</p>
+          <p className="truncate text-sm text-palma-100">{c.cargo}</p>
         </div>
-        <Badge variante={varianteEstado(c.estado)} className="bg-white">
+        <Badge variante={varianteEstado(c.estado)} className="relative bg-white">
           {c.estado}
         </Badge>
       </div>
       <CardContent>
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Dato icono={IdCard} etiqueta="Cédula" valor={c.cedula} />
+          <Dato icono={IdCard} etiqueta="Documento" valor={`${c.tipo_documento} ${c.cedula}`} />
           <Dato icono={Building} etiqueta="Área" valor={c.area} />
           <Dato icono={Briefcase} etiqueta="Tipo de contrato" valor={c.tipo_contrato} />
           <Dato
@@ -43,7 +48,6 @@ export function ColaboradorCard({ colaborador: c, mostrarSalario = true }: { col
             etiqueta="Fecha de ingreso"
             valor={`${formatDate(c.fecha_ingreso)} · ${describirAntiguedad(c.fecha_ingreso)}`}
           />
-          {mostrarSalario ? <Dato icono={Wallet} etiqueta="Salario base" valor={formatCurrency(c.salario_base)} /> : null}
           <Dato icono={Mail} etiqueta="Correo" valor={c.email} />
           <Dato icono={Phone} etiqueta="Teléfono" valor={c.telefono} />
         </dl>

@@ -6,11 +6,12 @@ import { cn } from "@/lib/utils";
 export const clasesCampo = (conError: boolean) =>
   cn(
     "block w-full rounded-lg border bg-white px-3 py-2 text-sm text-texto shadow-sm transition-colors",
-    "placeholder:text-slate-400 focus:outline-none focus:ring-2",
+    "placeholder:text-slate-400 focus:outline-none",
     "disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-texto-suave",
+    // Foco del sistema: borde 1.5px + halo de 4px
     conError
-      ? "border-error focus:border-error focus:ring-error/20"
-      : "border-borde focus:border-acento focus:ring-acento/20",
+      ? "border-error focus:border-error focus:shadow-[0_0_0_0.5px_var(--error),0_0_0_4px_rgba(179,54,43,0.12)]"
+      : "border-borde focus:border-acento focus:shadow-[0_0_0_0.5px_var(--acento),0_0_0_4px_var(--acento-suave)]",
   );
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -42,7 +43,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         required={required}
         aria-invalid={error ? true : undefined}
         aria-describedby={error || ayuda ? idMensaje : undefined}
-        className={cn(clasesCampo(Boolean(error)), "h-10", className)}
+        className={cn(clasesCampo(Boolean(error)), "h-11", className)}
         {...props}
       />
       {error ? (

@@ -40,7 +40,7 @@ export default function PaginaColaboradores() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-texto-suave">Gestione los datos personales, laborales y de nómina.</p>
+        <p className="text-sm text-texto-suave">Gestione los datos de cada colaborador y sus documentos.</p>
         {botonNuevo}
       </div>
 

@@ -5,58 +5,48 @@ import {
   actualizarUsuario,
   crearUsuario,
   eliminarUsuario,
+  getUsuarioPorCedula,
   getUsuarioPorColaborador,
-  getUsuarioPorEmail,
+  type UsuarioAuth,
 } from "@/lib/airtable/usuarios";
 import type { Colaborador } from "@/types/colaborador";
 
 /**
  * Mantiene la cuenta de acceso (tabla "Usuarios") alineada con la ficha del colaborador.
- * La ficha es la fuente de verdad de email, nombre, rol y estado; los secretos solo viven en "Usuarios".
+ * La ficha es la fuente de verdad de cédula, nombre, rol y estado; los secretos solo viven en "Usuarios".
  */
 
-/** Lanza 409 si el email ya pertenece a la cuenta de otro colaborador o de un admin independiente. */
-export async function verificarEmailDisponible(email: string, colaboradorId?: string): Promise<void> {
-  if (!email) return;
-  const existente = await getUsuarioPorEmail(email);
+/** Lanza 409 si la cédula ya pertenece a la cuenta de otro colaborador o de un admin independiente. */
+export async function verificarCedulaDisponible(cedula: string | undefined, colaboradorId?: string): Promise<void> {
+  if (!cedula) return;
+  const existente = await getUsuarioPorCedula(cedula);
   if (existente && existente.colaboradorId !== colaboradorId) {
-    throw new ErrorApi(409, "Ya existe una cuenta de acceso con ese correo electrónico");
+    throw new ErrorApi(409, "Ya existe una cuenta de acceso con esa cédula");
   }
 }
 
 /**
- * Crea o actualiza la cuenta del colaborador. Una cuenta nueva queda sin contraseña: el colaborador
- * la crea desde /auth/forgot-password con su correo registrado.
+ * Crea o actualiza la cuenta del colaborador y la devuelve. Una cuenta nueva queda sin PIN: el admin
+ * genera un PIN temporal desde la ficha y se lo entrega en persona.
  */
-export async function sincronizarCuentaColaborador(colaborador: Colaborador): Promise<void> {
+export async function sincronizarCuentaColaborador(colaborador: Colaborador): Promise<UsuarioAuth> {
   const cuenta = await getUsuarioPorColaborador(colaborador.id);
-  const nombre = `${colaborador.nombres} ${colaborador.apellidos}`.trim();
-  const activo = colaborador.estado === "Activo" && Boolean(colaborador.email);
-
-  if (!cuenta) {
-    if (!colaborador.email) return; // sin correo no hay forma de ingresar ni de recuperar la cuenta
-    await crearUsuario({
-      email: colaborador.email,
-      nombre,
-      role: colaborador.rol,
-      colaboradorId: colaborador.id,
-      activo,
-    });
-    return;
-  }
-
-  const cambios = {
-    email: colaborador.email || cuenta.email,
-    nombre,
+  const datos = {
+    cedula: colaborador.cedula,
+    email: colaborador.email,
+    nombre: `${colaborador.nombres} ${colaborador.apellidos}`.trim(),
     role: colaborador.rol,
-    activo,
+    activo: colaborador.estado === "Activo",
   };
-  const cambioSensible =
-    cambios.email !== cuenta.email || cambios.role !== cuenta.role || (cuenta.activo && !activo);
 
-  await actualizarUsuario(cuenta.id, cambios);
-  // Un cambio de correo, rol o una desactivación cierra las sesiones abiertas
+  if (!cuenta) return crearUsuario({ ...datos, colaboradorId: colaborador.id });
+
+  const cambioSensible =
+    datos.cedula !== cuenta.cedula || datos.role !== cuenta.role || (cuenta.activo && !datos.activo);
+  const actualizada = await actualizarUsuario(cuenta.id, datos);
+  // Un cambio de cédula, rol o una desactivación cierra las sesiones abiertas
   if (cambioSensible) await revocarTodosDelUsuario(cuenta.id, "admin");
+  return actualizada;
 }
 
 /** Elimina la cuenta de acceso del colaborador (al eliminar su ficha). */

@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { construirQuery, peticion } from "@/lib/api-cliente";
+import { obtenerCsrf } from "@/providers/auth-provider";
+import type { AccesoColaborador, RespuestaPinTemporal } from "@/types/auth";
 import type {
   Colaborador,
   ColaboradorInput,
@@ -13,7 +15,30 @@ export const clavesColaboradores = {
   todos: ["colaboradores"] as const,
   lista: (filtros: FiltrosColaboradores) => ["colaboradores", "lista", filtros] as const,
   detalle: (id: string) => ["colaboradores", "detalle", id] as const,
+  acceso: (id: string) => ["colaboradores", "acceso", id] as const,
 };
+
+/** Estado del acceso (PIN) de un colaborador. */
+export function useAccesoColaborador(id: string | null | undefined) {
+  return useQuery({
+    queryKey: clavesColaboradores.acceso(id ?? ""),
+    queryFn: () => peticion<AccesoColaborador>(`/api/colaboradores/${id}/acceso`),
+    enabled: Boolean(id),
+  });
+}
+
+/** Genera un PIN temporal. El PIN solo llega en esta respuesta: no se guarda en la caché. */
+export function useGenerarPinTemporal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      peticion<RespuestaPinTemporal>(`/api/colaboradores/${id}/acceso`, {
+        method: "POST",
+        headers: { "X-CSRF-Token": await obtenerCsrf() },
+      }),
+    onSuccess: (_, id) => queryClient.invalidateQueries({ queryKey: clavesColaboradores.acceso(id) }),
+  });
+}
 
 /** Lista paginada de colaboradores con filtros. */
 export function useColaboradores(filtros: FiltrosColaboradores = {}, habilitado = true) {

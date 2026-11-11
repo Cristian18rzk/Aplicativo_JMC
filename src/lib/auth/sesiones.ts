@@ -117,18 +117,30 @@ export async function emitirRefreshToken(datos: {
   return `${registro.id}.${secreto}`;
 }
 
-/** Comprueba que la cuenta (y su ficha de colaborador) siga habilitada para tener sesión. */
-export async function cuentaHabilitada(usuario: UsuarioAuth | null, authTime: number): Promise<boolean> {
+/**
+ * Comprueba que la cuenta (y su ficha de colaborador) siga habilitada para tener sesión.
+ * Una cuenta con PIN temporal pendiente no puede tener sesión: primero debe crear su PIN propio.
+ * El login pasa `permitirCambioPendiente` para decidir si la envía a crear el PIN.
+ */
+export async function cuentaHabilitada(
+  usuario: UsuarioAuth | null,
+  authTime: number,
+  { permitirCambioPendiente = false }: { permitirCambioPendiente?: boolean } = {},
+): Promise<boolean> {
   if (!usuario || !usuario.activo || usuario.lockedPermanently || usuario.lockedUntil > Date.now()) return false;
   if (!usuario.passwordHash) return false;
+  if (usuario.debeCambiarPin && !permitirCambioPendiente) return false;
   // Si la contraseña cambió después del login, la sesión ya no es válida
   if (usuario.lastPasswordChange > authTime) return false;
-  if (usuario.role === "colaborador") {
-    if (!usuario.colaboradorId) return false;
-    const colaborador = await obtener(TABLAS_AUTH.colaboradores, usuario.colaboradorId);
-    if (!colaborador || texto(colaborador.fields, "estado") !== "Activo") return false;
-  }
-  return true;
+  return fichaActiva(usuario);
+}
+
+/** Un colaborador solo puede ingresar si su ficha existe y está "Activo" (los admins no dependen de ella). */
+export async function fichaActiva(usuario: UsuarioAuth): Promise<boolean> {
+  if (usuario.role !== "colaborador") return true;
+  if (!usuario.colaboradorId) return false;
+  const colaborador = await obtener(TABLAS_AUTH.colaboradores, usuario.colaboradorId);
+  return Boolean(colaborador && texto(colaborador.fields, "estado") === "Activo");
 }
 
 export type ResultadoRotacion =

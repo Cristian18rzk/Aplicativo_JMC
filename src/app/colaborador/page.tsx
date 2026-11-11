@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, Download, FileText, type LucideIcon } from "lucide-react";
+import { Award, Download, ExternalLink, FileText, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { ColaboradorCard } from "@/components/colaboradores/colaborador-card";
 import { clasesBoton } from "@/components/ui/button";
@@ -11,13 +11,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { useColaborador } from "@/hooks/use-colaboradores";
 import { useMisDesprendibles } from "@/hooks/use-desprendibles";
 import { mensajeDeError } from "@/lib/api-cliente";
-import { formatCurrency, formatPeriodo } from "@/lib/utils";
+import { formatDate, formatPeriodo } from "@/lib/utils";
 
 function AccesoRapido({ href, icono: Icono, titulo, descripcion }: { href: string; icono: LucideIcon; titulo: string; descripcion: string }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-4 rounded-lg border border-borde bg-white p-4 shadow-sm transition-all hover:border-acento hover:shadow-md"
+      className="flex items-center gap-4 rounded-xl border border-borde bg-white p-4 transition-all hover:border-acento hover:shadow-md"
     >
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-acento-suave">
         <Icono className="h-5 w-5 text-acento" aria-hidden />
@@ -44,7 +44,7 @@ export default function DashboardColaborador() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-texto">Hola, {colaborador.nombres.split(" ")[0]}</h1>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-texto">Hola, {colaborador.nombres.split(" ")[0]}</h1>
         <p className="text-sm text-texto-suave">Aquí encuentra sus datos y documentos laborales.</p>
       </div>
 
@@ -65,17 +65,28 @@ export default function DashboardColaborador() {
           ) : ultimo ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-medium text-texto">
+                <p className="font-display text-lg font-bold tracking-tight text-texto">
                   {formatPeriodo(ultimo.periodo)} · {ultimo.tipo_periodo}
                 </p>
-                <p className="text-sm text-texto-suave">
-                  Neto a pagar: <span className="font-semibold text-acento">{formatCurrency(ultimo.neto_a_pagar)}</span>
-                </p>
+                <p className="text-sm text-texto-suave">Publicado el {formatDate(ultimo.fecha_carga)}</p>
               </div>
-              <a href={`/api/desprendibles/${ultimo.id}/pdf?descargar=1`} className={clasesBoton("primary")}>
-                <Download className="h-4 w-4" aria-hidden />
-                Descargar PDF
-              </a>
+              {ultimo.tieneArchivo ? (
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <a
+                    href={`/api/desprendibles/${ultimo.id}/pdf`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={clasesBoton("secondary")}
+                  >
+                    <ExternalLink className="h-4 w-4" aria-hidden />
+                    Ver
+                  </a>
+                  <a href={`/api/desprendibles/${ultimo.id}/pdf?descargar=1`} className={clasesBoton("primary")}>
+                    <Download className="h-4 w-4" aria-hidden />
+                    Descargar PDF
+                  </a>
+                </div>
+              ) : null}
             </div>
           ) : (
             <p className="text-sm text-texto-suave">Aún no tiene desprendibles registrados.</p>

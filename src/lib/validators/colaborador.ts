@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AREAS, ESTADOS_COLABORADOR, ROLES, TIPOS_CONTRATO } from "@/types/colaborador";
+import { AREAS, ESTADOS_COLABORADOR, ROLES, TIPOS_CONTRATO, TIPOS_DOCUMENTO } from "@/types/colaborador";
 import { cedulaSchema } from "./auth";
 
 const textoObligatorio = (campo: string, max = 100) =>
@@ -9,10 +9,9 @@ const textoObligatorio = (campo: string, max = 100) =>
     .min(1, { error: `${campo} es obligatorio` })
     .max(max, { error: `${campo} no puede superar ${max} caracteres` });
 
-const textoOpcional = (max = 100) => z.string().trim().max(max).default("");
-
 export const colaboradorBaseSchema = z.object({
   // Datos personales
+  tipo_documento: z.enum(TIPOS_DOCUMENTO, { error: "Seleccione un tipo de documento válido" }),
   cedula: cedulaSchema,
   nombres: textoObligatorio("Nombres"),
   apellidos: textoObligatorio("Apellidos"),
@@ -33,27 +32,8 @@ export const colaboradorBaseSchema = z.object({
   area: z.enum(AREAS, { error: "Seleccione un área válida" }),
   fecha_ingreso: z.iso.date({ error: "Fecha de ingreso inválida (AAAA-MM-DD)" }),
   tipo_contrato: z.enum(TIPOS_CONTRATO, { error: "Seleccione un tipo de contrato válido" }),
-  salario_base: z.coerce
-    .number({ error: "El salario debe ser un número" })
-    .int({ error: "El salario debe ser un valor entero en pesos" })
-    .min(0, { error: "El salario no puede ser negativo" })
-    .max(1_000_000_000, { error: "Salario fuera de rango" }),
   estado: z.enum(ESTADOS_COLABORADOR, { error: "Seleccione un estado válido" }),
   rol: z.enum(ROLES, { error: "Seleccione un rol válido" }),
-
-  // Datos bancarios
-  banco: textoOpcional(60),
-  cuenta_bancaria: z
-    .string()
-    .trim()
-    .regex(/^[\d-]{0,30}$/, { error: "La cuenta solo puede contener dígitos y guiones" })
-    .default(""),
-
-  // Seguridad social
-  eps: textoOpcional(),
-  fondo_pensiones: textoOpcional(),
-  arl: textoOpcional(),
-  caja_compensacion: textoOpcional(),
 });
 
 export const crearColaboradorSchema = colaboradorBaseSchema;

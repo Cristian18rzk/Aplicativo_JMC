@@ -1,41 +1,57 @@
-import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { DatosEmpresa } from "@/lib/empresa";
-import { MESES, formatCurrency, parseFecha, pesosEnLetras } from "@/lib/utils";
+import { MESES, parseFecha } from "@/lib/utils";
 import type { Certificado, ContenidoCertificado } from "@/types/certificado";
-import { COLORES_PDF, estilosBase, inicialesEmpresa } from "./estilos";
+import { NOMBRES_DOCUMENTO } from "@/types/colaborador";
+import { COLORES_PDF, estilosBase } from "./estilos";
+import { LOGO_JMC_DATA_URI } from "./logo";
 
 const estilos = StyleSheet.create({
-  pagina: { ...estilosBase.pagina, paddingHorizontal: 64, fontSize: 11, lineHeight: 1.6 },
+  pagina: { ...estilosBase.pagina, paddingTop: 48, paddingBottom: 72, paddingHorizontal: 72, fontSize: 11, lineHeight: 1.6 },
+  // Marco Oro Ala de dos líneas alrededor de la página (sello de distinción de los certificados)
+  marcoExterior: {
+    position: "absolute",
+    top: 22,
+    left: 22,
+    right: 22,
+    bottom: 22,
+    borderWidth: 1,
+    borderColor: COLORES_PDF.oro,
+  },
+  marcoInterior: {
+    position: "absolute",
+    top: 27,
+    left: 27,
+    right: 27,
+    bottom: 27,
+    borderWidth: 1,
+    borderColor: COLORES_PDF.oro,
+  },
+  encabezado: { alignItems: "center", gap: 8 },
+  logo: { width: 72, height: 72, borderRadius: 36 },
+  lineaEmpresa: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 8,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: COLORES_PDF.oroOscuro,
+    textAlign: "center",
+  },
+  datosEmpresa: { fontSize: 8, color: COLORES_PDF.textoSuave, textAlign: "center" },
   titulo: {
     fontFamily: "Helvetica-Bold",
-    fontSize: 14,
+    fontSize: 20,
     textAlign: "center",
-    marginTop: 24,
-    marginBottom: 28,
-    letterSpacing: 1,
+    marginTop: 20,
+    marginBottom: 24,
+    color: COLORES_PDF.texto,
   },
+  pie: { ...estilosBase.piePagina, bottom: 38, left: 72, right: 72 },
   suscrito: { fontFamily: "Helvetica-Bold", textAlign: "center", marginBottom: 4 },
   certifica: { fontFamily: "Helvetica-Bold", textAlign: "center", marginTop: 12, marginBottom: 18, fontSize: 12 },
   parrafo: { textAlign: "justify", marginBottom: 12 },
-  tabla: { borderWidth: 1, borderColor: COLORES_PDF.borde, borderRadius: 4, marginBottom: 12 },
-  fila: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORES_PDF.borde,
-  },
-  filaTotal: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    backgroundColor: COLORES_PDF.acentoSuave,
-  },
   firma: { marginTop: 64, width: 240 },
   lineaFirma: { borderTopWidth: 1, borderTopColor: COLORES_PDF.texto, paddingTop: 4 },
-  nota: { fontSize: 8, color: COLORES_PDF.textoSuave, marginTop: 24 },
 });
 
 export interface CertificadoTemplateProps {
@@ -69,66 +85,22 @@ function CuerpoLaboral({ contenido }: { contenido: ContenidoCertificado }) {
   return (
     <>
       <Text style={estilos.parrafo}>
-        Que el(la) señor(a) <Text style={estilosBase.negrita}>{nombre}</Text>, identificado(a) con cédula de ciudadanía
-        No. <Text style={estilosBase.negrita}>{c.cedula}</Text>, {activo ? "labora" : "laboró"} en nuestra empresa desde
+        Que el(la) señor(a) <Text style={estilosBase.negrita}>{nombre}</Text>, identificado(a) con{" "}
+        {/* Certificados antiguos no guardaban el tipo de documento: eran cédulas de ciudadanía */}
+        {NOMBRES_DOCUMENTO[c.tipo_documento ?? "CC"].toLowerCase()} No.{" "}
+        <Text style={estilosBase.negrita}>{c.cedula}</Text>, {activo ? "labora" : "laboró"} en nuestra empresa desde
         el <Text style={estilosBase.negrita}>{fechaIngresoTexto(c.fecha_ingreso)}</Text>, mediante contrato de trabajo{" "}
         {DESCRIPCION_CONTRATO[c.tipo_contrato] ?? c.tipo_contrato.toLowerCase()}, desempeñando el cargo de{" "}
         <Text style={estilosBase.negrita}>{c.cargo.toUpperCase()}</Text> en el área {c.area}.
       </Text>
-      {contenido.incluirSalario ? (
-        <Text style={estilos.parrafo}>
-          {activo ? "Actualmente devenga" : "Devengaba"} un salario básico mensual de{" "}
-          <Text style={estilosBase.negrita}>
-            {pesosEnLetras(c.salario_base)} ({formatCurrency(c.salario_base)})
-          </Text>
-          .
-        </Text>
-      ) : null}
     </>
   );
 }
 
-function CuerpoIngresos({ contenido }: { contenido: ContenidoCertificado }) {
-  const c = contenido.colaborador;
-  const ing = contenido.ingresos;
-  const nombre = `${c.nombres} ${c.apellidos}`.toUpperCase();
-  if (!ing) return null;
-  return (
-    <>
-      <Text style={estilos.parrafo}>
-        Que al(la) señor(a) <Text style={estilosBase.negrita}>{nombre}</Text>, identificado(a) con cédula de ciudadanía
-        No. <Text style={estilosBase.negrita}>{c.cedula}</Text>, quien se desempeña en el cargo de {c.cargo}, le fueron
-        pagados durante el año gravable <Text style={estilosBase.negrita}>{ing.anio}</Text> los siguientes valores por
-        concepto de pagos laborales, según {ing.cantidadDesprendibles}{" "}
-        {ing.cantidadDesprendibles === 1 ? "comprobante" : "comprobantes"} de nómina registrados:
-      </Text>
-      <View style={estilos.tabla}>
-        <View style={estilos.fila}>
-          <Text>Total ingresos laborales (devengados)</Text>
-          <Text style={estilosBase.negrita}>{formatCurrency(ing.totalDevengado)}</Text>
-        </View>
-        <View style={estilos.fila}>
-          <Text>Aportes obligatorios a salud</Text>
-          <Text>{formatCurrency(ing.deduccionSalud)}</Text>
-        </View>
-        <View style={estilos.fila}>
-          <Text>Aportes obligatorios a pensión</Text>
-          <Text>{formatCurrency(ing.deduccionPension)}</Text>
-        </View>
-        <View style={estilos.filaTotal}>
-          <Text style={estilosBase.negrita}>Retención en la fuente practicada</Text>
-          <Text style={estilosBase.negrita}>{formatCurrency(ing.retencionFuente)}</Text>
-        </View>
-      </View>
-    </>
-  );
-}
-
-/** Plantilla PDF de certificado laboral / de ingresos y retenciones. */
+/** Plantilla PDF del certificado laboral. */
 export function CertificadoTemplate({ certificado, empresa }: CertificadoTemplateProps) {
   const contenido = certificado.contenido;
-  const esIngresos = certificado.tipo === "Ingresos y retenciones";
-  const titulo = esIngresos ? "CERTIFICADO DE INGRESOS Y RETENCIONES" : "CERTIFICACIÓN LABORAL";
+  const titulo = "CERTIFICACIÓN LABORAL";
 
   return (
     <Document
@@ -138,22 +110,21 @@ export function CertificadoTemplate({ certificado, empresa }: CertificadoTemplat
       language="es"
     >
       <Page size="LETTER" style={estilos.pagina}>
-        <View style={estilosBase.encabezado}>
-          <View style={estilosBase.marcaEmpresa}>
-            <Text style={estilosBase.logo}>{inicialesEmpresa(empresa.nombre)}</Text>
-            <View>
-              <Text style={estilosBase.nombreEmpresa}>{empresa.nombre}</Text>
-              {empresa.nit ? <Text style={estilosBase.datoEmpresa}>NIT {empresa.nit}</Text> : null}
-            </View>
-          </View>
-          <View>
-            <Text style={[estilosBase.datoEmpresa, { textAlign: "right" }]}>{empresa.direccion}</Text>
-            <Text style={[estilosBase.datoEmpresa, { textAlign: "right" }]}>{empresa.ciudad}</Text>
-            {empresa.telefono ? (
-              <Text style={[estilosBase.datoEmpresa, { textAlign: "right" }]}>Tel. {empresa.telefono}</Text>
-            ) : null}
-          </View>
+        <View style={estilos.marcoExterior} fixed />
+        <View style={estilos.marcoInterior} fixed />
+
+        <View style={estilos.encabezado}>
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- Image de react-pdf no admite alt */}
+          <Image src={LOGO_JMC_DATA_URI} style={estilos.logo} />
+          <Text style={estilos.lineaEmpresa}>
+            {empresa.nombre}
+            {empresa.nit ? ` · NIT ${empresa.nit}` : ""}
+          </Text>
+          <Text style={estilos.datosEmpresa}>
+            {[empresa.direccion, empresa.ciudad, empresa.telefono ? `Tel. ${empresa.telefono}` : ""].filter(Boolean).join(" · ")}
+          </Text>
         </View>
+        <View style={[estilosBase.fileteDoble, { marginTop: 14 }]} />
 
         <Text style={estilos.titulo}>{titulo}</Text>
 
@@ -165,11 +136,7 @@ export function CertificadoTemplate({ certificado, empresa }: CertificadoTemplat
         <Text style={estilos.certifica}>CERTIFICA:</Text>
 
         {contenido ? (
-          esIngresos ? (
-            <CuerpoIngresos contenido={contenido} />
-          ) : (
-            <CuerpoLaboral contenido={contenido} />
-          )
+          <CuerpoLaboral contenido={contenido} />
         ) : (
           <Text style={estilos.parrafo}>No fue posible leer el contenido de este certificado.</Text>
         )}
@@ -188,14 +155,7 @@ export function CertificadoTemplate({ certificado, empresa }: CertificadoTemplat
           <Text>{empresa.nombre}</Text>
         </View>
 
-        {esIngresos ? (
-          <Text style={estilos.nota}>
-            Este certificado resume los pagos registrados en el sistema de nómina y no reemplaza el Formulario 220 de
-            la DIAN.
-          </Text>
-        ) : null}
-
-        <Text style={estilosBase.piePagina} fixed>
+        <Text style={estilos.pie} fixed>
           Código de verificación: {certificado.id} · Generado por: {certificado.generado_por || "Sistema"} ·{" "}
           {[empresa.direccion, empresa.ciudad, empresa.telefono].filter(Boolean).join(" · ")}
         </Text>

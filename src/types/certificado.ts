@@ -1,23 +1,15 @@
 // Tipos de la tabla "Certificados" en Airtable
 import type { Colaborador } from "./colaborador";
 
-export const TIPOS_CERTIFICADO = ["Laboral", "Ingresos y retenciones"] as const;
+/** Solo certificados laborales: el de ingresos y retenciones dependía de los cálculos de nómina, que se retiraron. */
+export const TIPOS_CERTIFICADO = ["Laboral"] as const;
 export type TipoCertificado = (typeof TIPOS_CERTIFICADO)[number];
-
-/** Totales anuales usados en el certificado de ingresos y retenciones. */
-export interface TotalesIngresos {
-  anio: number;
-  totalDevengado: number;
-  deduccionSalud: number;
-  deduccionPension: number;
-  retencionFuente: number;
-  cantidadDesprendibles: number;
-}
 
 /** Instantánea de los datos con los que se generó el certificado (se guarda como JSON). */
 export interface ContenidoCertificado {
   colaborador: Pick<
     Colaborador,
+    | "tipo_documento"
     | "cedula"
     | "nombres"
     | "apellidos"
@@ -25,13 +17,10 @@ export interface ContenidoCertificado {
     | "area"
     | "fecha_ingreso"
     | "tipo_contrato"
-    | "salario_base"
     | "estado"
   >;
-  incluirSalario: boolean;
   dirigidoA: string;
   textoAdicional: string;
-  ingresos?: TotalesIngresos;
 }
 
 export interface Certificado {
@@ -48,10 +37,8 @@ export interface Certificado {
 export interface GenerarCertificadoInput {
   colaboradorId: string;
   tipo: TipoCertificado;
-  incluirSalario: boolean;
   dirigidoA: string;
   textoAdicional: string;
-  anio?: number;
 }
 
 export interface FiltrosCertificados {

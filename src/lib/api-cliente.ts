@@ -16,7 +16,8 @@ export async function peticion<T>(url: string, opciones: RequestInit = {}): Prom
     ...opciones,
     credentials: "same-origin",
     headers: {
-      ...(opciones.body ? { "Content-Type": "application/json" } : {}),
+      // Con FormData el navegador fija el Content-Type multipart (con su boundary)
+      ...(opciones.body && !(opciones.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
       ...opciones.headers,
     },
   });

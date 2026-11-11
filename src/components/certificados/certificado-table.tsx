@@ -45,10 +45,7 @@ export function CertificadoTable({
                 </TableCell>
               ) : null}
               <TableCell>
-                <Badge variante={c.tipo === "Laboral" ? "default" : "warning"}>{c.tipo}</Badge>
-                {c.contenido?.ingresos ? (
-                  <span className="ml-1.5 text-xs text-texto-suave">Año {c.contenido.ingresos.anio}</span>
-                ) : null}
+                <Badge variante="oro">{c.tipo}</Badge>
               </TableCell>
               <TableCell className="whitespace-nowrap">{formatDate(c.fecha_generacion)}</TableCell>
               <TableCell className="hidden text-sm text-texto-suave lg:table-cell">{c.generado_por || "—"}</TableCell>

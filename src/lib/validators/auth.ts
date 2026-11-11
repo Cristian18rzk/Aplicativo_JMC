@@ -1,73 +1,36 @@
 import { z } from "zod";
-import { LONGITUD_MAXIMA, REQUISITOS } from "@/lib/auth/fortaleza";
+import { LONGITUD_MAXIMA_SECRETO, erroresPin } from "@/lib/auth/pin";
 
 export const cedulaSchema = z
   .string({ error: "La cédula es obligatoria" })
   .trim()
-  .regex(/^\d{5,12}$/, { error: "La cédula debe tener entre 5 y 12 dígitos, sin puntos ni espacios" });
-
-export const emailSchema = z
-  .string({ error: "El correo es obligatorio" })
-  .trim()
-  .toLowerCase()
-  .min(1, { error: "El correo es obligatorio" })
-  .max(254, { error: "El correo es demasiado largo" })
-  .pipe(z.email({ error: "Ingresa un correo electrónico válido" }));
+  // Se toleran puntos y espacios al escribir ("1.098.765.432"): se guardan solo los dígitos
+  .transform((v) => v.replace(/[.\s]/g, ""))
+  .pipe(z.string().regex(/^\d{5,12}$/, { error: "La cédula debe tener entre 5 y 12 números" }));
 
 /**
- * Política de contraseña verificable en cliente y servidor.
- * El servidor además valida datos personales, historial y la lista de contraseñas comunes.
+ * Login: cédula + secreto (PIN del colaborador, PIN temporal o contraseña del admin).
+ * No se aplica la política del PIN: no se revelan reglas y el admin usa una contraseña.
  */
-export const nuevaPasswordSchema = z
-  .string({ error: "La contraseña es obligatoria" })
-  .superRefine((valor, ctx) => {
-    for (const requisito of REQUISITOS) {
-      if (!requisito.cumple(valor)) {
-        ctx.addIssue({ code: "custom", message: `Debe contener: ${requisito.etiqueta.toLowerCase()}` });
-      }
-    }
-  });
-
-/** En el login no se aplica la política (solo límites), para no revelar reglas ni rechazar cuentas antiguas. */
 export const loginSchema = z.object({
-  email: emailSchema,
+  cedula: cedulaSchema,
   password: z
-    .string({ error: "La contraseña es obligatoria" })
-    .min(1, { error: "La contraseña es obligatoria" })
-    .max(LONGITUD_MAXIMA, { error: "Credenciales inválidas" }),
+    .string({ error: "Escribe tu PIN" })
+    .min(1, { error: "Escribe tu PIN" })
+    .max(LONGITUD_MAXIMA_SECRETO, { error: "Credenciales inválidas" }),
 });
 
-export const forgotPasswordSchema = z.object({
-  email: emailSchema,
+/** PIN nuevo (sin la verificación contra la cédula, que se hace donde se conoce la cédula). */
+export const pinSchema = z.string({ error: "Escribe tu PIN" }).superRefine((valor, ctx) => {
+  for (const mensaje of erroresPin(valor)) ctx.addIssue({ code: "custom", message: mensaje });
 });
 
-/** Token del enlace: 32 bytes en base64url = 43 caracteres. */
-export const tokenResetSchema = z
-  .string({ error: "Enlace inválido" })
-  .regex(/^[A-Za-z0-9_-]{43}$/, { error: "Enlace inválido" });
-
-export const resetPasswordFormSchema = z
+export const crearPinSchema = z
   .object({
-    password: nuevaPasswordSchema,
-    confirmPassword: z.string({ error: "Confirma la contraseña" }).min(1, { error: "Confirma la contraseña" }),
+    pin: pinSchema,
+    confirmPin: z.string({ error: "Repite el PIN" }).min(1, { error: "Repite el PIN" }),
   })
-  .refine((d) => d.password === d.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "Las contraseñas no coinciden",
-  });
-
-export const resetPasswordSchema = z
-  .object({
-    token: tokenResetSchema,
-    password: nuevaPasswordSchema,
-    confirmPassword: z.string(),
-  })
-  .refine((d) => d.password === d.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "Las contraseñas no coinciden",
-  });
+  .refine((d) => d.pin === d.confirmPin, { path: ["confirmPin"], message: "Los PIN no coinciden" });
 
 export type LoginSchema = z.infer<typeof loginSchema>;
-export type ForgotPasswordSchema = z.infer<typeof forgotPasswordSchema>;
-export type ResetPasswordFormSchema = z.infer<typeof resetPasswordFormSchema>;
-export type ResetPasswordSchema = z.infer<typeof resetPasswordSchema>;
+export type CrearPinSchema = z.infer<typeof crearPinSchema>;

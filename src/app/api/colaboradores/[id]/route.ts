@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import * as colaboradoresDb from "@/lib/airtable/colaboradores";
 import { ErrorApi, leerJson, manejarErrorApi, soloClavesPresentes, validarIdRegistro } from "@/lib/api";
-import { eliminarCuentaColaborador, sincronizarCuentaColaborador, verificarEmailDisponible } from "@/lib/auth/cuentas";
+import { eliminarCuentaColaborador, sincronizarCuentaColaborador, verificarCedulaDisponible } from "@/lib/auth/cuentas";
 import { requerirAdmin, requerirSesion, verificarAccesoPropio } from "@/lib/auth/middleware";
 import { actualizarColaboradorSchema } from "@/lib/validators/colaborador";
 
@@ -39,10 +39,10 @@ export async function PUT(request: NextRequest, { params }: Contexto) {
 
     const existente = await colaboradoresDb.getById(id);
     if (!existente) throw new ErrorApi(404, "Colaborador no encontrado");
-    if (datos.email) await verificarEmailDisponible(datos.email, id);
+    await verificarCedulaDisponible(datos.cedula, id);
 
     const colaborador = await colaboradoresDb.update(id, datos);
-    // Email, nombre, rol y estado se reflejan en la cuenta de acceso (y cierran sesiones si cambian)
+    // Cédula, nombre, rol y estado se reflejan en la cuenta de acceso (y cierran sesiones si cambian)
     await sincronizarCuentaColaborador(colaborador);
     return NextResponse.json(colaborador);
   } catch (error) {

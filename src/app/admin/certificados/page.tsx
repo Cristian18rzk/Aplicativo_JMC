@@ -7,19 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { EmptyState } from "@/components/ui/empty-state";
 import { CargandoPagina } from "@/components/ui/loading-spinner";
 import { Pagination } from "@/components/ui/pagination";
-import { Select } from "@/components/ui/select";
 import { useCertificados } from "@/hooks/use-certificados";
 import { useColaboradores } from "@/hooks/use-colaboradores";
 import { mensajeDeError } from "@/lib/api-cliente";
-import { TIPOS_CERTIFICADO, type TipoCertificado } from "@/types/certificado";
 
 export default function PaginaCertificados() {
   const [pagina, setPagina] = useState(1);
-  const [tipo, setTipo] = useState<TipoCertificado | "">("");
 
   // Incluye todos los estados: se pueden certificar colaboradores retirados
   const colaboradores = useColaboradores({ porPagina: 1000 });
-  const certificados = useCertificados({ pagina, porPagina: 10, tipo });
+  const certificados = useCertificados({ pagina, porPagina: 10 });
 
   return (
     <div className="grid gap-6 xl:grid-cols-5">
@@ -38,20 +35,8 @@ export default function PaginaCertificados() {
       </Card>
 
       <Card className="xl:col-span-3">
-        <CardHeader className="flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Historial de certificados</CardTitle>
-          <div className="w-full sm:w-56">
-            <Select
-              aria-label="Filtrar por tipo"
-              placeholder="Todos los tipos"
-              opciones={TIPOS_CERTIFICADO}
-              value={tipo}
-              onChange={(e) => {
-                setTipo(e.target.value as TipoCertificado | "");
-                setPagina(1);
-              }}
-            />
-          </div>
+        <CardHeader>
+          <CardTitle>Historial de certificados laborales</CardTitle>
         </CardHeader>
         {certificados.isError ? (
           <EmptyState titulo="Error al cargar el historial" descripcion={mensajeDeError(certificados.error)} />

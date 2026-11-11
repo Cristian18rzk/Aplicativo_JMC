@@ -7,9 +7,10 @@ export const EVENTOS_AUTH = [
   "cuenta_bloqueada",
   "cuenta_bloqueada_permanente",
   "rate_limit_ip",
-  "reset_solicitado",
-  "reset_rechazado",
-  "password_cambiado",
+  "pin_temporal_generado",
+  "pin_temporal_vencido",
+  "pin_creado",
+  "primer_ingreso",
   "refresh_reutilizado",
   "logout",
 ] as const;
@@ -18,12 +19,12 @@ export type EventoAuth = (typeof EVENTOS_AUTH)[number];
 
 export interface DatosEventoAuth {
   evento: EventoAuth;
-  email?: string;
+  cedula?: string;
   usuarioId?: string;
   ip?: string;
   userAgent?: string;
   exito: boolean;
-  /** Texto descriptivo. NUNCA incluir contraseñas, tokens ni hashes. */
+  /** Texto descriptivo. NUNCA incluir PIN, contraseñas, tokens ni hashes. */
   detalle?: string;
 }
 
@@ -38,7 +39,7 @@ export async function registrarEventoAuth(datos: DatosEventoAuth): Promise<void>
       registro: `${datos.evento} · ${fecha}`,
       evento: datos.evento,
       fecha,
-      email: datos.email?.toLowerCase().slice(0, 254) ?? null,
+      cedula: datos.cedula?.slice(0, 20) ?? null,
       user_id: datos.usuarioId ?? null,
       ip: datos.ip ?? null,
       user_agent: datos.userAgent?.slice(0, 500) ?? null,

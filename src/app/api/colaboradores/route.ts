@@ -1,7 +1,7 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import * as colaboradoresDb from "@/lib/airtable/colaboradores";
 import { leerJson, leerPaginacion, manejarErrorApi } from "@/lib/api";
-import { sincronizarCuentaColaborador, verificarEmailDisponible } from "@/lib/auth/cuentas";
+import { sincronizarCuentaColaborador, verificarCedulaDisponible } from "@/lib/auth/cuentas";
 import { requerirAdmin } from "@/lib/auth/middleware";
 import { crearColaboradorSchema } from "@/lib/validators/colaborador";
 import { AREAS, ESTADOS_COLABORADOR, type Area, type EstadoColaborador } from "@/types/colaborador";
@@ -33,10 +33,10 @@ export async function POST(request: NextRequest) {
   try {
     await requerirAdmin(request);
     const datos = crearColaboradorSchema.parse(await leerJson(request));
-    await verificarEmailDisponible(datos.email);
+    await verificarCedulaDisponible(datos.cedula);
     const colaborador = await colaboradoresDb.create(datos);
 
-    // Cuenta de acceso (sin contraseña: el colaborador la crea en /auth/forgot-password)
+    // Cuenta de acceso sin PIN: el admin genera un PIN temporal desde la ficha
     after(() =>
       sincronizarCuentaColaborador(colaborador).catch((e: Error) =>
         console.error("[cuentas] No fue posible crear la cuenta del colaborador:", e.message),

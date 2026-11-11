@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { Logo } from "@/components/ui/logo";
 import { cn, iniciales } from "@/lib/utils";
 
 const ENLACES = [
@@ -32,11 +33,12 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
     <div className="flex min-h-screen flex-col bg-fondo">
       <header className="sticky top-0 z-30 border-b border-borde bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4">
-          <Link href="/colaborador" className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-acento text-xs font-bold text-white">
-              JMC
+          <Link href="/colaborador" className="flex items-center gap-2.5">
+            <Logo tamano={40} decorativo />
+            <span className="leading-tight">
+              <span className="block font-display text-base font-bold tracking-tight text-texto">JMC Nómina</span>
+              <span className="hidden text-xs text-texto-suave sm:block">Portal del colaborador</span>
             </span>
-            <span className="hidden text-sm font-semibold text-texto sm:inline">Portal del colaborador</span>
           </Link>
           <div className="ml-auto flex items-center gap-3">
             {usuario ? (

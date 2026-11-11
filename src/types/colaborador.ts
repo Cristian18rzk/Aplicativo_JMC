@@ -12,27 +12,25 @@ export type EstadoColaborador = (typeof ESTADOS_COLABORADOR)[number];
 export const ROLES = ["admin", "colaborador"] as const;
 export type Rol = (typeof ROLES)[number];
 
-export const BANCOS = [
-  "Bancolombia",
-  "Banco de Bogotá",
-  "Davivienda",
-  "BBVA Colombia",
-  "Banco de Occidente",
-  "Banco Popular",
-  "Banco AV Villas",
-  "Banco Caja Social",
-  "Banco Agrario",
-  "Scotiabank Colpatria",
-  "Banco Falabella",
-  "Nequi",
-  "Daviplata",
-  "Otro",
-] as const;
-export type Banco = (typeof BANCOS)[number];
+/** Documento de identidad. El número (campo "cedula") es el que se usa para ingresar. */
+export const TIPOS_DOCUMENTO = ["CC", "PPT", "CE", "TI"] as const;
+export type TipoDocumento = (typeof TIPOS_DOCUMENTO)[number];
 
-/** Colaborador tal como se expone a la aplicación (sin datos sensibles de autenticación). */
+export const NOMBRES_DOCUMENTO: Record<TipoDocumento, string> = {
+  CC: "Cédula de ciudadanía",
+  PPT: "Permiso por protección temporal",
+  CE: "Cédula de extranjería",
+  TI: "Tarjeta de identidad",
+};
+
+/**
+ * Colaborador tal como se expone a la aplicación. Solo datos personales y laborales: el aplicativo ya
+ * no maneja nómina ni salarios (EPS, pensión, banco, sueldo…).
+ */
 export interface Colaborador {
   id: string;
+  tipo_documento: TipoDocumento;
+  /** Número del documento (cédula, PPT, CE o TI). */
   cedula: string;
   nombres: string;
   apellidos: string;
@@ -40,13 +38,6 @@ export interface Colaborador {
   area: Area;
   fecha_ingreso: string; // YYYY-MM-DD
   tipo_contrato: TipoContrato;
-  salario_base: number;
-  eps: string;
-  fondo_pensiones: string;
-  arl: string;
-  caja_compensacion: string;
-  cuenta_bancaria: string;
-  banco: string;
   estado: EstadoColaborador;
   rol: Rol;
   email: string;

@@ -8,9 +8,10 @@ import type {
   ListaPaginada,
   Rol,
   TipoContrato,
+  TipoDocumento,
 } from "@/types/colaborador";
 import { normalizarTexto, paginar } from "@/lib/utils";
-import { TABLAS, escaparFormula, leerNumero, leerTexto, tabla } from "./client";
+import { TABLAS, escaparFormula, leerTexto, tabla } from "./client";
 
 type RegistroAirtable = Airtable.Record<Airtable.FieldSet>;
 
@@ -19,6 +20,7 @@ function mapearColaborador(registro: RegistroAirtable): Colaborador {
   const c = registro.fields;
   return {
     id: registro.id,
+    tipo_documento: (leerTexto(c, "tipo_documento") || "CC") as TipoDocumento,
     cedula: leerTexto(c, "cedula"),
     nombres: leerTexto(c, "nombres"),
     apellidos: leerTexto(c, "apellidos"),
@@ -26,13 +28,6 @@ function mapearColaborador(registro: RegistroAirtable): Colaborador {
     area: (leerTexto(c, "area") || "Administrativa") as Area,
     fecha_ingreso: leerTexto(c, "fecha_ingreso"),
     tipo_contrato: (leerTexto(c, "tipo_contrato") || "Indefinido") as TipoContrato,
-    salario_base: leerNumero(c, "salario_base"),
-    eps: leerTexto(c, "eps"),
-    fondo_pensiones: leerTexto(c, "fondo_pensiones"),
-    arl: leerTexto(c, "arl"),
-    caja_compensacion: leerTexto(c, "caja_compensacion"),
-    cuenta_bancaria: leerTexto(c, "cuenta_bancaria"),
-    banco: leerTexto(c, "banco"),
     estado: (leerTexto(c, "estado") || "Activo") as EstadoColaborador,
     rol: (leerTexto(c, "rol") || "colaborador") as Rol,
     email: leerTexto(c, "email"),

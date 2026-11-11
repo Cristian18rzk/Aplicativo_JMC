@@ -1,6 +1,7 @@
 /**
  * Utilidades compartidas por los scripts de autenticación (fuera del bundle de Next.js).
- * Replican la política de src/lib/auth/fortaleza.ts y password.ts para validar en la terminal.
+ * La política de contraseñas fuertes solo aplica al administrador (los colaboradores usan PIN) y
+ * solo se valida aquí, porque la contraseña del admin solo se asigna con npm run auth:seed.
  */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -58,7 +59,7 @@ const COMUNES = new Set(
 
 const normalizar = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-export function erroresPolitica(password, { email = "", nombre = "" }) {
+export function erroresPolitica(password, { email = "", nombre = "", cedula = "" }) {
   const errores = [];
   if (password.length < 8 || password.length > 128) errores.push("Debe tener entre 8 y 128 caracteres");
   if (!/\p{Lu}/u.test(password)) errores.push("Debe contener una letra mayúscula");
@@ -72,6 +73,7 @@ export function erroresPolitica(password, { email = "", nombre = "" }) {
     (f) => f.length >= 3,
   );
   if (fragmentos.some((f) => normalizar(password).includes(f))) errores.push("No puede contener el correo ni el nombre");
+  if (cedula && password.includes(cedula)) errores.push("No puede contener la cédula");
 
   const p = password.toLowerCase();
   const sinSimbolos = p.replace(/[^a-z0-9]+$/, "");

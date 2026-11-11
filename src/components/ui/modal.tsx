@@ -66,7 +66,7 @@ export function Modal({ abierto, onCerrar, titulo, descripcion, children, pie, a
         aria-labelledby={idTitulo}
         tabIndex={-1}
         className={cn(
-          "relative flex max-h-[92vh] w-full animate-subir flex-col rounded-t-xl bg-white shadow-xl outline-none sm:rounded-lg",
+          "relative flex max-h-[92vh] w-full animate-subir flex-col rounded-t-2xl bg-white shadow-[0_30px_60px_-30px_rgba(43,45,44,0.35)] outline-none sm:rounded-2xl",
           ANCHOS[ancho],
         )}
       >

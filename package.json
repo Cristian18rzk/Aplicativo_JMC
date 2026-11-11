@@ -10,7 +10,8 @@
     "type-check": "next typegen && tsc --noEmit",
     "auth:setup": "node scripts/setup-airtable.mjs",
     "auth:seed": "node scripts/seed-admin.mjs",
-    "auth:migrar": "node scripts/migrar-colaboradores.mjs"
+    "auth:migrar": "node scripts/migrar-colaboradores.mjs",
+    "colaboradores:importar": "node scripts/importar-colaboradores.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.5",
@@ -30,7 +31,6 @@
     "react-hook-form": "^7.91.0",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.7.0",
-    "xlsx": "^0.18.5",
     "zod": "^4.6.7"
   },
   "devDependencies": {

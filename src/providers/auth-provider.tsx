@@ -10,28 +10,33 @@ import type { AuthUser } from "@/types/auth";
 
 export const CLAVE_USUARIO = ["auth", "me"] as const;
 
-/** Error de login con un código genérico (nunca indica si el email existe). */
+const MENSAJES_LOGIN = {
+  credenciales: "Cédula o PIN incorrectos",
+  limite: "Demasiados intentos desde esta red. Espera 15 minutos e inténtalo de nuevo.",
+  servicio: "El servicio no está disponible en este momento. Inténtalo de nuevo en unos minutos.",
+  red: "No fue posible conectar con el servidor. Revisa tu conexión.",
+  cambiar_pin: "Ahora crea tu PIN personal.",
+  pin_vencido: "Tu PIN temporal ya venció. Pide uno nuevo al administrador.",
+} as const;
+
+export type CodigoLogin = keyof typeof MENSAJES_LOGIN;
+
+/** Error de login con un código genérico (nunca indica si la cédula existe). */
 export class ErrorLogin extends Error {
-  constructor(public readonly codigo: "credenciales" | "limite" | "servicio" | "red") {
-    super(
-      codigo === "limite"
-        ? "Demasiados intentos desde esta red. Espera 15 minutos e inténtalo de nuevo."
-        : codigo === "servicio"
-          ? "El servicio no está disponible en este momento. Inténtalo de nuevo en unos minutos."
-          : codigo === "red"
-            ? "No fue posible conectar con el servidor. Revisa tu conexión."
-            : "Credenciales inválidas",
-    );
+  constructor(public readonly codigo: CodigoLogin) {
+    super(MENSAJES_LOGIN[codigo]);
     this.name = "ErrorLogin";
   }
 }
+
+const CODIGOS_SERVIDOR = new Set<string>(["limite", "servicio", "cambiar_pin", "pin_vencido"]);
 
 export interface ContextoAuth {
   usuario: AuthUser | null;
   isAdmin: boolean;
   isLoading: boolean;
-  /** Valida email + contraseña con Auth.js, carga el usuario y redirige según el rol. */
-  iniciarSesion: (email: string, password: string, redirigir?: string | null) => Promise<AuthUser>;
+  /** Valida cédula + PIN (o contraseña del admin) con Auth.js, carga el usuario y redirige según el rol. */
+  iniciarSesion: (cedula: string, password: string, redirigir?: string | null) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refrescar: () => Promise<unknown>;
 }
@@ -48,7 +53,7 @@ async function obtenerUsuarioActual(): Promise<AuthUser | null> {
   }
 }
 
-/** Token CSRF de Auth.js para los endpoints propios (logout, forgot, reset). */
+/** Token CSRF de Auth.js para los endpoints propios (logout, crear PIN, PIN temporal). */
 export async function obtenerCsrf(): Promise<string> {
   return getCsrfToken();
 }
@@ -64,17 +69,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const iniciarSesion = useCallback(
-    async (email: string, password: string, redirigir?: string | null) => {
+    async (cedula: string, password: string, redirigir?: string | null) => {
       let resultado: Awaited<ReturnType<typeof signIn>> | undefined;
       try {
         // signIn obtiene el token CSRF de Auth.js y lo envía junto con las credenciales
-        resultado = await signIn("credentials", { email, password, redirect: false });
+        resultado = await signIn("credentials", { cedula, password, redirect: false });
       } catch {
         throw new ErrorLogin("red");
       }
       if (!resultado || resultado.error) {
-        const codigo = resultado?.code;
-        throw new ErrorLogin(codigo === "limite" || codigo === "servicio" ? codigo : "credenciales");
+        const codigo = resultado?.code ?? "";
+        throw new ErrorLogin(CODIGOS_SERVIDOR.has(codigo) ? (codigo as CodigoLogin) : "credenciales");
       }
 
       queryClient.clear();

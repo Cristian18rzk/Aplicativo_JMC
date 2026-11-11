@@ -29,16 +29,13 @@ export const VENTANA_LOGINS_IP_MS = 15 * MINUTO;
 /** Delay progresivo: 1s, 2s, 4s, 8s… con tope para no agotar el tiempo de la función serverless. */
 export const DELAY_MAXIMO_MS = 16 * 1000;
 
-// ─── Restablecimiento ─────────────────────────────────────────────────
-export const VIGENCIA_RESET_MS = 1 * HORA;
-export const MAX_RESETS_POR_EMAIL = 3;
-export const VENTANA_RESETS_EMAIL_MS = 1 * HORA;
-export const MAX_RESETS_POR_IP = 10;
-export const VENTANA_RESETS_IP_MS = 1 * HORA;
-export const MAX_INTENTOS_RESET_POR_IP = 10;
-export const VENTANA_INTENTOS_RESET_IP_MS = 15 * MINUTO;
-/** Historial: no se permite reutilizar las últimas N contraseñas (incluida la actual). */
-export const HISTORIAL_CONTRASENAS = 3;
+// ─── PIN temporal y cambio de PIN ─────────────────────────────────────
+/** Vigencia del PIN temporal que el admin entrega en persona (personal de campo: no siempre ingresa el mismo día). */
+export const VIGENCIA_PIN_TEMPORAL_MS = 7 * DIA;
+/** Tiempo para crear el PIN propio después de entrar con el PIN temporal. */
+export const VIGENCIA_CAMBIO_PIN_MS = 15 * MINUTO;
+export const MAX_INTENTOS_CAMBIO_PIN_POR_IP = 10;
+export const VENTANA_INTENTOS_CAMBIO_PIN_IP_MS = 15 * MINUTO;
 
 export const BCRYPT_SALT_ROUNDS = 12;
 
@@ -55,6 +52,8 @@ export const COOKIE_SESION = `${prefijo}jmc.session`;
 export const COOKIE_REFRESH = `${prefijo}jmc.refresh`;
 export const COOKIE_CSRF = `${prefijo}jmc.csrf`;
 export const COOKIE_CALLBACK = `${prefijo}jmc.callback-url`;
+/** Token de un solo uso para crear el PIN propio tras entrar con el PIN temporal. */
+export const COOKIE_CAMBIO_PIN = `${prefijo}jmc.cambio-pin`;
 
 /** Opciones comunes: HttpOnly, Secure, SameSite=Strict, Path=/ */
 export const OPCIONES_COOKIE = {

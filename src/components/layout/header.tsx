@@ -19,8 +19,8 @@ const TITULOS: Record<string, string> = {
   "/admin": "Dashboard",
   "/admin/colaboradores": "Colaboradores",
   "/admin/colaboradores/nuevo": "Nuevo colaborador",
-  "/admin/desprendibles": "Desprendibles de nómina",
-  "/admin/desprendibles/cargar": "Cargue masivo de desprendibles",
+  "/admin/desprendibles": "Desprendibles de pago",
+  "/admin/desprendibles/cargar": "Cargue masivo de desprendibles (PDF)",
   "/admin/certificados": "Certificados laborales",
 };
 

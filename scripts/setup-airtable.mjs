@@ -2,6 +2,7 @@
 /**
  * Crea (o completa) las tablas del módulo de autenticación en la base de Airtable:
  *   Usuarios · refresh_tokens · auth_logs
+ * y agrega a la tabla existente "Desprendibles" los campos para guardar el PDF subido.
  *
  * Uso:  npm run auth:setup
  * Requiere en .env: AIRTABLE_API_KEY (con permisos schema.bases:read y schema.bases:write) y AIRTABLE_BASE_ID.
@@ -49,19 +50,22 @@ const TABLAS = [
     name: "Usuarios",
     description: "Cuentas de acceso. Contiene secretos (hashes): restrinja el acceso a esta tabla.",
     fields: [
-      { name: "email", type: "email", description: "Identificador de inicio de sesión (en minúsculas)" },
+      texto("cedula", "Identificador de inicio de sesión (solo dígitos)"),
+      { name: "email", type: "email", description: "Informativo: no se usa para ingresar" },
       texto("nombre"),
       opciones("role", ["admin", "colaborador"]),
       texto("colaborador_id", "ID del registro en Colaboradores (vacío para admins sin ficha)"),
       casilla("activo", "Desmarcar impide iniciar sesión"),
-      texto("password_hash", "bcrypt (12 rondas). Nunca la contraseña en texto plano"),
-      largo("previous_password_hashes", "JSON con los hashes de las contraseñas anteriores"),
+      texto("password_hash", "bcrypt (12 rondas) del PIN o de la contraseña del admin. Nunca en texto plano"),
+      largo("previous_password_hashes", "JSON con los hashes anteriores"),
+      casilla("must_change_pin", "El secreto vigente es un PIN temporal: debe crear su PIN al ingresar"),
+      fecha("temp_pin_expires", "Vencimiento del PIN temporal (7 días)"),
       entero("failed_login_attempts", "Fallos en la ventana actual de 15 minutos"),
       fecha("failed_window_start"),
       entero("total_failed_attempts", "Fallos acumulados desde el último login exitoso"),
       fecha("locked_until", "Bloqueo temporal (30 min tras 5 fallos)"),
-      casilla("locked_permanently", "Bloqueo tras 10 fallos. Para desbloquear: desmarcar y poner total_failed_attempts en 0"),
-      texto("reset_token_hash", "SHA-256 del token de restablecimiento"),
+      casilla("locked_permanently", "Bloqueo tras 10 fallos. Se levanta al generar un PIN temporal desde la ficha"),
+      texto("reset_token_hash", "SHA-256 del token de un solo uso para crear el PIN (15 min)"),
       fecha("reset_token_expires"),
       fecha("last_password_change"),
       fecha("created_at"),
@@ -85,7 +89,7 @@ const TABLAS = [
   },
   {
     name: "auth_logs",
-    description: "Auditoría de autenticación. Nunca contiene contraseñas ni tokens.",
+    description: "Auditoría de autenticación. Nunca contiene PIN, contraseñas ni tokens.",
     fields: [
       texto("registro"),
       opciones("evento", [
@@ -95,19 +99,37 @@ const TABLAS = [
         "cuenta_bloqueada",
         "cuenta_bloqueada_permanente",
         "rate_limit_ip",
-        "reset_solicitado",
-        "reset_rechazado",
-        "password_cambiado",
+        "pin_temporal_generado",
+        "pin_temporal_vencido",
+        "pin_creado",
+        "primer_ingreso",
         "refresh_reutilizado",
         "logout",
       ]),
       fecha("fecha"),
-      texto("email"),
+      texto("cedula"),
       texto("user_id"),
       texto("ip"),
       largo("user_agent"),
       casilla("exito"),
       largo("detalle"),
+    ],
+  },
+];
+
+/** Campos que deben existir en tablas creadas previamente (no se crean las tablas, solo se completan). */
+const CAMPOS_EN_TABLAS_EXISTENTES = [
+  {
+    tabla: "Colaboradores",
+    fields: [opciones("tipo_documento", ["CC", "PPT", "CE", "TI"], "Tipo del documento de identidad (el número va en cedula)")],
+  },
+  {
+    tabla: "Desprendibles",
+    fields: [
+      { name: "archivo", type: "multipleAttachments", options: { isReversed: false }, description: "PDF del desprendible" },
+      texto("nombre_archivo", "Nombre original del PDF subido"),
+      entero("tamano_bytes"),
+      texto("cargado_por", "Administrador que subió el archivo"),
     ],
   },
 ];
@@ -156,6 +178,23 @@ async function main() {
       faltantes.length
         ? `✔ Tabla "${definicion.name}" completada (${faltantes.length} campos nuevos)`
         : `✔ Tabla "${definicion.name}" ya estaba completa`,
+    );
+  }
+
+  for (const { tabla, fields } of CAMPOS_EN_TABLAS_EXISTENTES) {
+    const actual = existentes.find((t) => t.name === tabla);
+    if (!actual) {
+      console.warn(`⚠ No existe la tabla "${tabla}": créela primero (ver README).`);
+      continue;
+    }
+    const nombres = new Set(actual.fields.map((f) => f.name));
+    const faltantes = fields.filter((f) => !nombres.has(f.name));
+    for (const campo of faltantes) {
+      await api(`${URL_META}/${actual.id}/fields`, { method: "POST", body: JSON.stringify(campo) });
+      console.log(`  + ${tabla}.${campo.name}`);
+    }
+    console.log(
+      faltantes.length ? `✔ Tabla "${tabla}" completada (${faltantes.length} campos nuevos)` : `✔ Tabla "${tabla}" ya estaba completa`,
     );
   }
 
