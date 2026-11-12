@@ -34,7 +34,7 @@ export function ColaboradorCard({ colaborador: c }: { colaborador: Colaborador }
           <p className="truncate font-display text-xl font-bold tracking-tight">{nombre}</p>
           <p className="truncate text-sm text-palma-100">{c.cargo}</p>
         </div>
-        <Badge variante={varianteEstado(c.estado)} className="relative bg-white">
+        <Badge variante={varianteEstado(c.estado)} punto className="relative bg-white">
           {c.estado}
         </Badge>
       </div>
@@ -46,7 +46,7 @@ export function ColaboradorCard({ colaborador: c }: { colaborador: Colaborador }
           <Dato
             icono={CalendarDays}
             etiqueta="Fecha de ingreso"
-            valor={`${formatDate(c.fecha_ingreso)} · ${describirAntiguedad(c.fecha_ingreso)}`}
+            valor={`${formatDate(c.fecha_ingreso)} (${describirAntiguedad(c.fecha_ingreso)})`}
           />
           <Dato icono={Mail} etiqueta="Correo" valor={c.email} />
           <Dato icono={Phone} etiqueta="Teléfono" valor={c.telefono} />

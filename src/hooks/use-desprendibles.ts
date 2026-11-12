@@ -12,6 +12,13 @@ export const clavesDesprendibles = {
   detalle: (id: string) => ["desprendibles", "detalle", id] as const,
 };
 
+/** Tras cambiar desprendibles se refrescan las listas y los indicadores del panel. */
+const invalidar = (queryClient: ReturnType<typeof useQueryClient>) =>
+  Promise.all([
+    queryClient.invalidateQueries({ queryKey: clavesDesprendibles.todos }),
+    queryClient.invalidateQueries({ queryKey: ["resumen-admin"] }),
+  ]);
+
 const urlLista = (filtros: FiltrosDesprendibles) =>
   `/api/desprendibles${construirQuery({
     pagina: filtros.pagina,
@@ -57,7 +64,7 @@ export function useSubirDesprendible() {
   return useMutation({
     mutationFn: ({ datos, archivo }: { datos: DesprendibleInput; archivo: File }) =>
       peticion<Desprendible>("/api/desprendibles", { method: "POST", body: aFormulario(datos, archivo) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: clavesDesprendibles.todos }),
+    onSuccess: () => invalidar(queryClient),
   });
 }
 
@@ -67,7 +74,7 @@ export function useUpdateDesprendible() {
   return useMutation({
     mutationFn: ({ id, datos, archivo }: { id: string; datos: Partial<DesprendibleInput>; archivo?: File | null }) =>
       peticion<Desprendible>(`/api/desprendibles/${id}`, { method: "PUT", body: aFormulario(datos, archivo) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: clavesDesprendibles.todos }),
+    onSuccess: () => invalidar(queryClient),
   });
 }
 
@@ -75,6 +82,6 @@ export function useDeleteDesprendible() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => peticion<{ mensaje: string }>(`/api/desprendibles/${id}`, { method: "DELETE" }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: clavesDesprendibles.todos }),
+    onSuccess: () => invalidar(queryClient),
   });
 }

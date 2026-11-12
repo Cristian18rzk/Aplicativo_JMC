@@ -23,10 +23,10 @@
   /* Neutros */
   --texto: #2b2d2c; /* Tinta */
   --texto-suave: #6b6862; /* Piedra */
-  --fondo: #faf8f4; /* Arena */
+  --fondo: #e9eee5; /* Neblina de la mañana sobre la plantación: fondo del panel */
   --superficie: #ffffff;
-  --borde: #e6e1d8; /* Línea */
-  --borde-fuerte: #d6d0c4;
+  --borde: #dde4d8; /* Línea, con el verde de la neblina */
+  --borde-fuerte: #c9d3c3;
   --exito: #2e6b3f;
   --error: #b3362b;
   --alerta: #e8782a;
@@ -202,6 +202,40 @@
     transform: translate(18px, -140px);
     opacity: 0;
   }
+}
+
+/* ─── Lote del mes (panel del administrador) ─── */
+
+/* Las palmas brotan una tras otra al cargar: el único movimiento del panel */
+@keyframes brotar {
+  from {
+    transform: scale(0.2) rotate(-40deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+.palma-lote-copa {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: brotar 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.palma-lote {
+  cursor: pointer;
+  outline: none;
+}
+
+.palma-lote:hover .palma-lote-copa {
+  filter: brightness(1.12);
+}
+
+.palma-lote:focus-visible .palma-lote-foco {
+  stroke: var(--acento);
+  stroke-width: 2;
 }
 
 /* Titileo suave de las estrellas */

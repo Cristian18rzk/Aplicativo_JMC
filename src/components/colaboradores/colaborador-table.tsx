@@ -48,13 +48,13 @@ export function ColaboradorTable({ colaboradores, cargando = false, accionVacio 
             const nombre = `${c.nombres} ${c.apellidos}`;
             return (
               <TableRow key={c.id}>
-                <TableCell className="font-mono text-xs sm:text-sm">
+                <TableCell className="text-sm tabular-nums">
                   {c.tipo_documento !== "CC" ? <span className="mr-1 text-texto-suave">{c.tipo_documento}</span> : null}
                   {c.cedula}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-acento-suave text-xs font-semibold text-acento sm:flex">
+                    <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#4F8C60,#1F4D2C)] text-xs font-semibold text-white ring-2 ring-palma-100 sm:flex">
                       {iniciales(nombre)}
                     </div>
                     <div className="min-w-0">
@@ -66,7 +66,9 @@ export function ColaboradorTable({ colaboradores, cargando = false, accionVacio 
                 <TableCell className="hidden md:table-cell">{c.cargo}</TableCell>
                 <TableCell className="hidden sm:table-cell">{c.area}</TableCell>
                 <TableCell>
-                  <Badge variante={varianteEstado(c.estado)}>{c.estado}</Badge>
+                  <Badge variante={varianteEstado(c.estado)} punto>
+                    {c.estado}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">

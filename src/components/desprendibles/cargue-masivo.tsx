@@ -84,7 +84,7 @@ export function CargueMasivo({ colaboradores }: { colaboradores: ColaboradorBasi
     () =>
       colaboradores
         .filter((c) => plantilla && plantillaSegunArea(c.area) === plantilla)
-        .map((c) => ({ valor: c.id, etiqueta: `${c.nombres} ${c.apellidos}`.trim() + ` · ${c.cedula}` }))
+        .map((c) => ({ valor: c.id, etiqueta: `${c.nombres} ${c.apellidos}`.trim() + ` (${c.cedula})` }))
         .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, "es")),
     [colaboradores, plantilla],
   );
@@ -185,7 +185,7 @@ export function CargueMasivo({ colaboradores }: { colaboradores: ColaboradorBasi
                     </span>
                   </span>
                   <span className="mt-1 block text-sm text-texto-suave">
-                    {DESCRIPCION_PLANTILLA[p]} · {plural(cantidad, "persona", "personas")}
+                    {DESCRIPCION_PLANTILLA[p]}: {plural(cantidad, "persona", "personas")}
                   </span>
                 </button>
               );
@@ -340,7 +340,7 @@ export function CargueMasivo({ colaboradores }: { colaboradores: ColaboradorBasi
               {procesando
                 ? `Subiendo… ${subidos} de ${subidos + listos.length}`
                 : listos.length
-                  ? `${plural(listos.length, "desprendible", "desprendibles")} de ${formatPeriodo(periodo)} · ${tipo} para subir.`
+                  ? `${plural(listos.length, "desprendible", "desprendibles")} de ${formatPeriodo(periodo)} (${tipo}) para subir.`
                   : subidos
                     ? `${plural(subidos, "desprendible subido", "desprendibles subidos")}.`
                     : "Agregue los archivos PDF para continuar."}

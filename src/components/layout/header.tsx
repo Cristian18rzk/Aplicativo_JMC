@@ -13,10 +13,12 @@ const NOMBRES_SEGMENTO: Record<string, string> = {
   certificados: "Certificados",
   nuevo: "Nuevo",
   cargar: "Cargue masivo",
+  plantillas: "Plantillas",
 };
 
 const TITULOS: Record<string, string> = {
-  "/admin": "Dashboard",
+  "/admin": "Inicio",
+  "/admin/desprendibles/plantillas": "Plantillas de desprendibles",
   "/admin/colaboradores": "Colaboradores",
   "/admin/colaboradores/nuevo": "Nuevo colaborador",
   "/admin/desprendibles": "Desprendibles de pago",
@@ -45,7 +47,7 @@ export function Header({ onAbrirMenu }: { onAbrirMenu: () => void }) {
   const titulo = TITULOS[ruta] ?? (ruta.startsWith("/admin/colaboradores/") ? "Detalle del colaborador" : "");
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-borde bg-white/95 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-borde bg-fondo/90 px-4 backdrop-blur-md sm:px-6">
       <button
         type="button"
         onClick={onAbrirMenu}
@@ -55,7 +57,7 @@ export function Header({ onAbrirMenu }: { onAbrirMenu: () => void }) {
         <Menu className="h-5 w-5" />
       </button>
       <div className="min-w-0 flex-1">
-        <nav aria-label="Ruta de navegación" className="hidden sm:block">
+        <nav aria-label="Ruta de navegación" className={migas.length > 1 ? "hidden sm:block" : "hidden"}>
           <ol className="flex items-center gap-1 text-xs text-texto-suave">
             {migas.map((miga, i) => (
               <Fragment key={miga.href}>
@@ -75,7 +77,7 @@ export function Header({ onAbrirMenu }: { onAbrirMenu: () => void }) {
             ))}
           </ol>
         </nav>
-        <h1 className="truncate text-base font-semibold text-texto sm:text-lg">{titulo}</h1>
+        <h1 className="truncate font-display text-base font-bold tracking-tight text-palma-900 sm:text-lg">{titulo}</h1>
       </div>
     </header>
   );

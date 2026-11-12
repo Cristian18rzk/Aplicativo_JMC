@@ -15,7 +15,7 @@ export interface EnlaceNavegacion {
 }
 
 export const ENLACES_ADMIN: EnlaceNavegacion[] = [
-  { href: "/admin", etiqueta: "Dashboard", icono: LayoutDashboard },
+  { href: "/admin", etiqueta: "Inicio", icono: LayoutDashboard },
   { href: "/admin/colaboradores", etiqueta: "Colaboradores", icono: Users },
   { href: "/admin/desprendibles", etiqueta: "Desprendibles", icono: FileText },
   { href: "/admin/certificados", etiqueta: "Certificados", icono: Award },
@@ -47,18 +47,18 @@ export function ContenidoNavegacion({
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className={cn("flex h-20 items-center gap-3 px-5", colapsado && "justify-center px-2")}>
-        <Logo tamano={40} decorativo={!colapsado} />
+    <div className="relative flex h-full flex-col overflow-hidden">
+      <div className={cn("relative flex h-20 items-center gap-3 px-5", colapsado && "justify-center px-2")}>
+        <Logo tamano={40} decorativo={!colapsado} className="border-white/30 shadow-[0_0_0_3px_rgba(255,255,255,0.08)]" />
         {!colapsado ? (
           <div className="min-w-0">
-            <p className="truncate font-display text-lg font-bold tracking-tight text-texto">Portal JMC</p>
-            <p className="text-xs text-texto-suave">Jairo Martínez JMC S.A.S.</p>
+            <p className="truncate font-display text-lg font-bold tracking-tight text-[#FFF8EC]">Portal JMC</p>
+            <p className="text-xs text-palma-200/80">Jairo Martínez JMC S.A.S.</p>
           </div>
         ) : null}
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Navegación principal">
+      <nav className="relative flex-1 space-y-1 overflow-y-auto p-3" aria-label="Navegación principal">
         {ENLACES_ADMIN.map(({ href, etiqueta, icono: Icono }) => {
           const activo = esEnlaceActivo(ruta, href);
           return (
@@ -69,28 +69,32 @@ export function ContenidoNavegacion({
               title={colapsado ? etiqueta : undefined}
               aria-current={activo ? "page" : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
                 colapsado && "justify-center px-2",
-                activo ? "bg-white text-palma-800 shadow-sm" : "text-slate-700 hover:bg-white/60 hover:text-texto",
+                activo
+                  ? "bg-white/12 text-[#FFE3A8] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+                  : "text-palma-100/80 hover:bg-white/6 hover:text-white",
               )}
             >
-              <Icono className="h-5 w-5 shrink-0" aria-hidden />
+              {/* Marca oro de la opción activa */}
+              {activo ? <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-[#FFC35C]" aria-hidden /> : null}
+              <Icono className={cn("h-5 w-5 shrink-0", activo && "text-[#FFC35C]")} aria-hidden />
               {!colapsado ? <span>{etiqueta}</span> : null}
             </Link>
           );
         })}
       </nav>
 
-      <div className="border-t border-palma-200 p-3">
+      <div className="relative border-t border-white/10 p-3">
         {usuario ? (
           <div className={cn("mb-2 flex items-center gap-3 px-2 py-1", colapsado && "justify-center px-0")}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-acento text-xs font-semibold text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FFC35C] text-xs font-bold text-palma-950">
               {iniciales(usuario.nombre)}
             </div>
             {!colapsado ? (
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-texto">{usuario.nombre}</p>
-                <p className="text-xs text-texto-suave">Administrador</p>
+                <p className="truncate text-sm font-semibold text-white">{usuario.nombre}</p>
+                <p className="text-xs text-palma-200/80">Administrador</p>
               </div>
             ) : null}
           </div>
@@ -101,7 +105,7 @@ export function ContenidoNavegacion({
           disabled={saliendo}
           title={colapsado ? "Cerrar sesión" : undefined}
           className={cn(
-            "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-white/60 hover:text-error disabled:opacity-60",
+            "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-palma-100/80 transition-colors hover:bg-white/6 hover:text-[#FFB4A8] disabled:opacity-60",
             colapsado && "justify-center px-2",
           )}
         >
@@ -118,7 +122,7 @@ export function Sidebar({ colapsado, onAlternar }: { colapsado: boolean; onAlter
   return (
     <aside
       className={cn(
-        "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-palma-200 bg-acento-suave transition-[width] duration-200 lg:flex",
+        "sticky top-0 hidden h-screen shrink-0 flex-col bg-[#12301C] transition-[width] duration-200 lg:flex",
         colapsado ? "w-20" : "w-64",
       )}
     >

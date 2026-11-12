@@ -7,6 +7,7 @@ import {
   eliminar,
   escaparFormula,
   fechaMs,
+  listar,
   numero,
   obtener,
   primero,
@@ -167,6 +168,38 @@ export async function actualizarUsuario(id: string, datos: CambiosUsuario): Prom
 export async function nombreDelUsuario(usuarioId: string): Promise<string> {
   const usuario = await getUsuarioPorId(usuarioId);
   return usuario?.nombre || usuario?.cedula || "Usuario";
+}
+
+/** Situación del acceso de un colaborador, para los indicadores del panel (sin exponer secretos). */
+export type SituacionAcceso = "con_pin" | "pin_temporal" | "sin_pin" | "bloqueado";
+
+/**
+ * Situación del acceso de cada cuenta de colaborador, por ID de ficha. Solo se leen los campos
+ * necesarios y del hash solo se usa si existe: nada sensible sale de esta función.
+ */
+export async function situacionesDeAcceso(): Promise<Map<string, SituacionAcceso>> {
+  const registros = await listar(TABLAS_AUTH.usuarios, {
+    fields: ["colaborador_id", "role", "password_hash", "must_change_pin", "locked_until", "locked_permanently"],
+  });
+  const ahora = Date.now();
+  const situaciones = new Map<string, SituacionAcceso>();
+  for (const r of registros) {
+    const c = r.fields;
+    const colaboradorId = texto(c, "colaborador_id");
+    if (!colaboradorId || texto(c, "role") === "admin") continue;
+    const bloqueado = booleano(c, "locked_permanently") || fechaMs(c, "locked_until") > ahora;
+    situaciones.set(
+      colaboradorId,
+      bloqueado
+        ? "bloqueado"
+        : !texto(c, "password_hash")
+          ? "sin_pin"
+          : booleano(c, "must_change_pin")
+            ? "pin_temporal"
+            : "con_pin",
+    );
+  }
+  return situaciones;
 }
 
 export async function eliminarUsuario(id: string): Promise<void> {

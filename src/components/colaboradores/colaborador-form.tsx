@@ -149,7 +149,7 @@ export function ColaboradorForm({
         <Select
           label="Tipo de documento"
           required
-          opciones={TIPOS_DOCUMENTO.map((t) => ({ valor: t, etiqueta: `${t} · ${NOMBRES_DOCUMENTO[t]}` }))}
+          opciones={TIPOS_DOCUMENTO.map((t) => ({ valor: t, etiqueta: `${NOMBRES_DOCUMENTO[t]} (${t})` }))}
           {...campo("tipo_documento")}
         />
         <Input

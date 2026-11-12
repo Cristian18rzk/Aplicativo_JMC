@@ -67,7 +67,7 @@ export function ZonaArchivos({
             {titulo ?? (multiple ? "Arrastre los PDF aquí o haga clic para seleccionarlos" : "Arrastre el PDF aquí o haga clic para seleccionarlo")}
           </span>
           <span className="block text-sm text-texto-suave">
-            {ayuda ?? `Solo PDF · máximo ${TAMANO_MAXIMO_PDF / 1024 / 1024} MB por archivo`}
+            {ayuda ?? `Solo PDF, de máximo ${TAMANO_MAXIMO_PDF / 1024 / 1024} MB por archivo`}
           </span>
         </span>
         <input

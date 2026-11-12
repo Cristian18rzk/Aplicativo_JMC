@@ -31,34 +31,34 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
 
   return (
     <div className="flex min-h-screen flex-col bg-fondo">
-      <header className="sticky top-0 z-30 border-b border-borde bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-30 bg-[#12301C] text-white">
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4">
           <Link href="/colaborador" className="flex items-center gap-2.5">
-            <Logo tamano={40} decorativo />
+            <Logo tamano={40} decorativo className="border-white/30" />
             <span className="leading-tight">
-              <span className="block font-display text-base font-bold tracking-tight text-texto">Portal JMC</span>
-              <span className="hidden text-xs text-texto-suave sm:block">Portal del colaborador</span>
+              <span className="block font-display text-base font-bold tracking-tight text-[#FFF8EC]">Portal JMC</span>
+              <span className="hidden text-xs text-palma-200/80 sm:block">Portal del colaborador</span>
             </span>
           </Link>
           <div className="ml-auto flex items-center gap-3">
             {usuario ? (
               <div className="flex items-center gap-2">
                 <span className="hidden text-right sm:block">
-                  <span className="block text-sm font-medium text-texto">{usuario.nombre}</span>
-                  <span className="block text-xs text-texto-suave">C.C. {usuario.cedula}</span>
+                  <span className="block text-sm font-medium text-white">{usuario.nombre}</span>
+                  <span className="block text-xs text-palma-200/80">{usuario.cedula}</span>
                 </span>
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-acento-suave text-xs font-semibold text-acento">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#FFC35C] text-xs font-bold text-palma-950">
                   {iniciales(usuario.nombre)}
                 </span>
               </div>
             ) : (
-              <span className="h-9 w-32 animate-pulse rounded bg-slate-200" />
+              <span className="h-9 w-32 animate-pulse rounded bg-white/10" />
             )}
             <button
               type="button"
               onClick={salir}
               disabled={saliendo}
-              className="rounded-lg p-2 text-texto-suave transition-colors hover:bg-slate-100 hover:text-error disabled:opacity-60"
+              className="rounded-lg p-2 text-palma-100 transition-colors hover:bg-white/10 hover:text-[#FFB4A8] disabled:opacity-60"
               aria-label="Cerrar sesión"
               title="Cerrar sesión"
             >
@@ -75,8 +75,8 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
                 href={href}
                 aria-current={activo ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors",
-                  activo ? "border-acento text-acento" : "border-transparent text-texto-suave hover:text-texto",
+                  "flex items-center gap-2 border-b-[3px] px-3 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors",
+                  activo ? "border-[#FFC35C] text-[#FFE3A8]" : "border-transparent text-palma-100/75 hover:text-white",
                 )}
               >
                 <Icono className="h-4 w-4" aria-hidden />

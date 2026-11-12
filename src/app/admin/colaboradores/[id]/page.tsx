@@ -7,6 +7,7 @@ import { Suspense, useState } from "react";
 import { AccesoColaborador } from "@/components/colaboradores/acceso-colaborador";
 import { ColaboradorCard } from "@/components/colaboradores/colaborador-card";
 import { ColaboradorForm } from "@/components/colaboradores/colaborador-form";
+import { AnioDesprendibles } from "@/components/desprendibles/anio-desprendibles";
 import { DesprendibleForm } from "@/components/desprendibles/desprendible-form";
 import { Button, clasesBoton } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +36,8 @@ function DetalleColaborador() {
 
   const { data: colaborador, isLoading, isError, error } = useColaborador(id);
   const desprendibles = useDesprendibles({ colaboradorId: id, porPagina: 6 });
+  // Todos los del colaborador para la franja del año (son pocos: máximo 24 por año)
+  const anio = useDesprendibles({ colaboradorId: id, porPagina: 100 });
   const certificados = useCertificados({ colaboradorId: id, porPagina: 5 });
   const subir = useSubirDesprendible();
   const actualizar = useUpdateColaborador();
@@ -138,6 +141,9 @@ function DetalleColaborador() {
                 Subir desprendible
               </Button>
             </CardHeader>
+            <div className="border-b border-borde bg-[#FCFAF6] px-5 py-4">
+              <AnioDesprendibles desprendibles={anio.data?.datos ?? []} fechaIngreso={colaborador.fecha_ingreso} />
+            </div>
             {desprendibles.data && desprendibles.data.datos.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -151,7 +157,7 @@ function DetalleColaborador() {
                   {desprendibles.data.datos.map((d) => (
                     <TableRow key={d.id}>
                       <TableCell>
-                        {formatPeriodo(d.periodo)} <span className="text-texto-suave">· {d.tipo_periodo}</span>
+                        {formatPeriodo(d.periodo)} <span className="text-texto-suave">{d.tipo_periodo}</span>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">{formatDate(d.fecha_carga)}</TableCell>
                       <TableCell className="text-right">

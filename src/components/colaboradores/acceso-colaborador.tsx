@@ -17,7 +17,7 @@ const fechaHora = (ms: number) =>
   new Date(ms).toLocaleString("es-CO", { dateStyle: "long", timeStyle: "short" });
 
 const ESTADOS: Record<EstadoAcceso, { etiqueta: string; variante: VarianteBadge }> = {
-  sin_pin: { etiqueta: "Sin PIN", variante: "neutral" },
+  sin_pin: { etiqueta: "Sin PIN", variante: "warning" },
   pin_temporal: { etiqueta: "PIN temporal pendiente", variante: "warning" },
   pin_temporal_vencido: { etiqueta: "PIN temporal vencido", variante: "destructive" },
   activo: { etiqueta: "Activo", variante: "success" },
@@ -149,9 +149,9 @@ export function AccesoColaborador({ colaborador }: { colaborador: Colaborador })
         {pinGenerado ? (
           <div className="space-y-4 text-sm text-texto">
             <div className="rounded-xl border border-borde bg-slate-50 px-4 py-5 text-center">
-              <p className="text-xs uppercase tracking-wide text-texto-suave">Cédula</p>
+              <p className="text-sm text-texto-suave">Cédula</p>
               <p className="text-lg font-semibold tabular-nums">{colaborador.cedula}</p>
-              <p className="mt-3 text-xs uppercase tracking-wide text-texto-suave">PIN temporal</p>
+              <p className="mt-3 text-sm text-texto-suave">PIN temporal</p>
               <p className="font-mono text-4xl font-bold tracking-[0.3em] tabular-nums text-acento" aria-live="polite">
                 {pinGenerado.pin}
               </p>

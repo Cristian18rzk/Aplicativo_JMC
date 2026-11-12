@@ -155,6 +155,30 @@ function Hilera({ y, desde, hasta, paso, escala, color, alto }: {
   return <g>{palmas}</g>;
 }
 
+/**
+ * Franja decorativa de la plantación (colinas + hileras de palmas) para las bandas de bienvenida del
+ * panel. Mismo dibujo que la portada de ingreso, en un formato bajo y ancho.
+ */
+export function FranjaPlantacion({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 1440 260" preserveAspectRatio="xMidYMax slice" aria-hidden focusable="false">
+      <defs>
+        <radialGradient id="franja-halo" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="#FFE7B0" stopOpacity="0.85" />
+          <stop offset="0.4" stopColor="#F9C46B" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#E8782A" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle cx="1180" cy="210" r="260" fill="url(#franja-halo)" />
+      <circle cx="1180" cy="210" r="70" fill="#FCD27E" opacity="0.95" />
+      <path d="M0 200C200 176 420 190 640 186S1080 168 1440 190V260H0Z" fill="#2E6B3F" opacity="0.55" />
+      <Hilera y={196} desde={-20} hasta={1460} paso={70} escala={0.3} color="#1F4D2C" alto={160} />
+      <path d="M0 236C300 220 640 232 900 228S1300 216 1440 226V260H0Z" fill="#173A21" />
+      <Hilera y={240} desde={30} hasta={1440} paso={150} escala={0.5} color="#122d1a" alto={170} />
+    </svg>
+  );
+}
+
 /** Estrellas del cielo de madrugada: [x, y, radio, retraso del titileo]. */
 const ESTRELLAS: [number, number, number, number][] = [
   [90, 60, 1.2, 0], [210, 140, 0.9, -1.5], [330, 40, 1.4, -3], [470, 110, 1, -0.8], [560, 30, 0.8, -2.2],

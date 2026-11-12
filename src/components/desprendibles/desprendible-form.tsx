@@ -70,7 +70,7 @@ export function DesprendibleForm({
   };
 
   const opciones = colaboradores
-    .map((c) => ({ valor: c.id, etiqueta: `${c.nombres} ${c.apellidos}`.trim() + (c.cedula ? ` · C.C. ${c.cedula}` : "") }))
+    .map((c) => ({ valor: c.id, etiqueta: `${c.nombres} ${c.apellidos}`.trim() + (c.cedula ? ` (${c.cedula})` : "") }))
     .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, "es"));
 
   return (

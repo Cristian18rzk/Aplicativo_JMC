@@ -25,11 +25,11 @@ export function MobileNav({ abierto, onCerrar }: { abierto: boolean; onCerrar: (
   return (
     <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú de navegación">
       <div className="absolute inset-0 animate-aparecer bg-slate-900/50" onClick={onCerrar} aria-hidden />
-      <div className="relative flex h-full w-72 max-w-[85vw] animate-deslizar-izquierda flex-col bg-acento-suave shadow-xl">
+      <div className="relative flex h-full w-72 max-w-[85vw] animate-deslizar-izquierda flex-col bg-[#12301C] shadow-xl">
         <button
           type="button"
           onClick={onCerrar}
-          className="absolute top-6 right-3 z-10 rounded-lg p-1.5 text-slate-700 hover:bg-white/60 hover:text-texto"
+          className="absolute top-6 right-3 z-10 rounded-lg p-1.5 text-palma-100 hover:bg-white/10 hover:text-white"
           aria-label="Cerrar menú"
         >
           <X className="h-5 w-5" />
