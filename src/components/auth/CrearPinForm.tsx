@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -11,6 +10,7 @@ import { LONGITUD_PIN, erroresPin } from "@/lib/auth/pin";
 import { crearPinSchema, type CrearPinSchema } from "@/lib/validators/auth";
 import { obtenerCsrf } from "@/providers/auth-provider";
 import { AlertaAuth, BotonAuth, CampoAuth, TarjetaAuth } from "./auth-ui";
+import { IconoEscudoPin, IconoPin } from "./iconos-auth";
 
 const CLASE_PIN = "h-14 text-2xl tracking-[0.5em] sm:text-2xl";
 
@@ -73,7 +73,7 @@ export function CrearPinForm({ cedula, nombre }: { cedula: string; nombre: strin
     <TarjetaAuth
       titulo={nombre ? `Hola, ${nombre}. Crea tu PIN` : "Crea tu PIN"}
       descripcion={`Elige ${LONGITUD_PIN} números que puedas recordar. Con tu cédula y este PIN vas a ingresar de ahora en adelante.`}
-      icono={<ShieldCheck className="h-5 w-5" aria-hidden />}
+      icono={<IconoEscudoPin className="h-6 w-6" />}
     >
       <form onSubmit={handleSubmit(enviar)} noValidate className="space-y-5">
         {error ? (
@@ -84,6 +84,7 @@ export function CrearPinForm({ cedula, nombre }: { cedula: string; nombre: strin
 
         <CampoAuth
           label={`Nuevo PIN (${LONGITUD_PIN} números)`}
+          icono={<IconoPin className="h-[22px] w-[22px]" />}
           type="password"
           inputMode="numeric"
           pattern="[0-9]*"
@@ -99,6 +100,7 @@ export function CrearPinForm({ cedula, nombre }: { cedula: string; nombre: strin
 
         <CampoAuth
           label="Repite el PIN"
+          icono={<IconoPin className="h-[22px] w-[22px]" />}
           type="password"
           inputMode="numeric"
           pattern="[0-9]*"

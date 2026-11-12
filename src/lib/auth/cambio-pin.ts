@@ -2,12 +2,7 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import { registrarEventoAuth } from "@/lib/airtable/auth-logs";
 import { revocarTodosDelUsuario } from "@/lib/airtable/refresh-tokens";
-import {
-  actualizarUsuario,
-  getUsuarioPorCedula,
-  getUsuarioPorTokenCambio,
-  type UsuarioAuth,
-} from "@/lib/airtable/usuarios";
+import { actualizarUsuario, getUsuarioPorTokenCambio, type UsuarioAuth } from "@/lib/airtable/usuarios";
 import {
   MAX_INTENTOS_CAMBIO_PIN_POR_IP,
   VENTANA_INTENTOS_CAMBIO_PIN_IP_MS,
@@ -17,13 +12,12 @@ import {
 import { hashPassword } from "./password";
 import { LONGITUD_PIN_TEMPORAL, erroresPin } from "./pin";
 import * as rateLimit from "./rate-limit";
-import { fichaActiva } from "./sesiones";
 import { generarTokenSeguro, hashesIguales, sha256 } from "./tokens";
 
 /**
  * Ciclo de vida del PIN (sin correo):
- *  - Primer ingreso: la cuenta se crea sin PIN. El colaborador escribe su cédula en /auth/primer-ingreso
- *    y, si la cuenta aún no tiene PIN, recibe el token de un solo uso para crearlo.
+ *  - Primer ingreso: la cuenta se crea sin PIN. Al ingresar con su cédula (el PIN se deja vacío), el
+ *    login no abre sesión sino que emite el token de un solo uso para crearlo.
  *  - Olvidó el PIN: el admin genera un PIN temporal de 6 dígitos desde la ficha y lo entrega en persona;
  *    al entrar con él, el login no abre sesión sino que emite el mismo token de un solo uso.
  *  - Con el token (cookie HttpOnly, 15 min) crea su PIN de 4 dígitos en /auth/crear-pin; se cierran
@@ -76,60 +70,6 @@ export async function generarPinTemporal(usuario: UsuarioAuth, adminId: string, 
     detalle: `PIN temporal generado por el admin ${adminId}. Vence ${new Date(expira).toISOString()}. Sesiones revocadas: ${revocadas}`,
   });
   return { pin, expira };
-}
-
-// ─── 1b. Primer ingreso (cuenta sin PIN) ──────────────────────────────
-
-export type ResultadoPrimerIngreso =
-  | { ok: true; token: string }
-  | { ok: false; estado: 400 | 429; error: string };
-
-export const MENSAJE_PRIMER_INGRESO_NO_DISPONIBLE =
-  "No encontramos una cuenta pendiente de crear PIN con esa cédula. Si ya creaste tu PIN, ingresa con él; si lo olvidaste o es tu primera vez y no funciona, comunícate con el administrador.";
-
-/**
- * Habilita la creación del PIN para una cuenta que nunca ha tenido uno. Cualquier otro caso (cédula
- * inexistente, cuenta con PIN, inactiva o bloqueada) recibe la misma respuesta.
- * Una vez creado el PIN, este camino queda cerrado para esa cuenta: solo un PIN temporal del admin lo cambia.
- */
-export async function iniciarPrimerIngreso(cedula: string, ctx: Contexto): Promise<ResultadoPrimerIngreso> {
-  const limite = await rateLimit.consumir(
-    `primer-ingreso:${ctx.ip}`,
-    MAX_INTENTOS_CAMBIO_PIN_POR_IP,
-    VENTANA_INTENTOS_CAMBIO_PIN_IP_MS,
-  );
-  if (!limite.permitido) {
-    return { ok: false, estado: 429, error: "Demasiados intentos. Espera unos minutos e inténtalo de nuevo." };
-  }
-
-  const usuario = await getUsuarioPorCedula(cedula);
-  const disponible =
-    usuario &&
-    !usuario.passwordHash &&
-    usuario.activo &&
-    !usuario.lockedPermanently &&
-    usuario.lockedUntil <= Date.now() &&
-    (await fichaActiva(usuario));
-  if (!disponible) {
-    return { ok: false, estado: 400, error: MENSAJE_PRIMER_INGRESO_NO_DISPONIBLE };
-  }
-
-  const token = generarTokenSeguro();
-  await actualizarUsuario(usuario.id, {
-    debeCambiarPin: true,
-    pinTemporalExpira: 0,
-    tokenCambioHash: sha256(token),
-    tokenCambioExpira: Date.now() + VIGENCIA_CAMBIO_PIN_MS,
-  });
-  await registrarEventoAuth({
-    evento: "primer_ingreso",
-    cedula,
-    usuarioId: usuario.id,
-    ...ctx,
-    exito: true,
-    detalle: "Primer ingreso: se habilitó la creación del PIN",
-  });
-  return { ok: true, token };
 }
 
 // ─── 2. Token de cambio (login con PIN temporal) ──────────────────────

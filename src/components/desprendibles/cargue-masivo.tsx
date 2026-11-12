@@ -11,10 +11,18 @@ import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSubirDesprendible } from "@/hooks/use-desprendibles";
 import { mensajeDeError } from "@/lib/api-cliente";
-import { formatPeriodo, formatTamano, periodoActual } from "@/lib/utils";
+import { cn, formatPeriodo, formatTamano, periodoActual } from "@/lib/utils";
 import { periodoSchema, validarArchivoPdf } from "@/lib/validators/desprendible";
 import type { Colaborador } from "@/types/colaborador";
-import { TIPOS_PERIODO, type TipoPeriodo } from "@/types/desprendible";
+import {
+  DESCRIPCION_PLANTILLA,
+  NOMBRES_PLANTILLA,
+  PLANTILLAS_DESPRENDIBLE,
+  TIPOS_PERIODO,
+  plantillaSegunArea,
+  type PlantillaDesprendible,
+  type TipoPeriodo,
+} from "@/types/desprendible";
 import { ZonaArchivos } from "./zona-archivos";
 
 const MAXIMO_ARCHIVOS = 300;
@@ -33,11 +41,11 @@ interface Item {
   estado: Estado;
 }
 
-type ColaboradorBasico = Pick<Colaborador, "id" | "nombres" | "apellidos" | "cedula">;
+type ColaboradorBasico = Pick<Colaborador, "id" | "nombres" | "apellidos" | "cedula" | "area">;
 
 /**
- * Busca en el nombre del archivo una secuencia de 5 a 12 dígitos que sea la cédula de un colaborador.
- * Si hay varias candidatas, solo se acepta cuando exactamente una corresponde a un colaborador.
+ * Busca en el nombre del archivo una secuencia de 5 a 12 dígitos que sea la cédula de un colaborador
+ * (de cualquier grupo). Si hay varias candidatas, solo se acepta cuando exactamente una corresponde.
  */
 function detectarColaborador(nombre: string, porCedula: Map<string, ColaboradorBasico>): ColaboradorBasico | null {
   const candidatas = [...new Set(nombre.replace(/\.pdf$/i, "").match(/\d{5,12}/g) ?? [])];
@@ -45,8 +53,25 @@ function detectarColaborador(nombre: string, porCedula: Map<string, ColaboradorB
   return encontrados.length === 1 ? encontrados[0] : null;
 }
 
+/** Asigna el archivo si el colaborador es del grupo que se está cargando; si es del otro, lo explica. */
+function asignar(archivo: File, porCedula: Map<string, ColaboradorBasico>, plantilla: PlantillaDesprendible) {
+  const invalido = validarArchivoPdf(archivo);
+  if (invalido) return { colaboradorId: "", error: invalido };
+  const colaborador = detectarColaborador(archivo.name, porCedula);
+  if (!colaborador) return { colaboradorId: "", error: "" };
+  const suya = plantillaSegunArea(colaborador.area);
+  if (suya !== plantilla) {
+    return {
+      colaboradorId: "",
+      error: `${colaborador.nombres} ${colaborador.apellidos} es del área ${colaborador.area}: va en el cargue de ${NOMBRES_PLANTILLA[suya]}.`,
+    };
+  }
+  return { colaboradorId: colaborador.id, error: "" };
+}
+
 export function CargueMasivo({ colaboradores }: { colaboradores: ColaboradorBasico[] }) {
   const subir = useSubirDesprendible();
+  const [plantilla, setPlantilla] = useState<PlantillaDesprendible | "">("");
   const [periodo, setPeriodo] = useState(periodoActual);
   const [tipo, setTipo] = useState<TipoPeriodo>("Mensual");
   const [items, setItems] = useState<Item[]>([]);
@@ -54,32 +79,38 @@ export function CargueMasivo({ colaboradores }: { colaboradores: ColaboradorBasi
   const [errorPeriodo, setErrorPeriodo] = useState("");
 
   const porCedula = useMemo(() => new Map(colaboradores.map((c) => [c.cedula, c])), [colaboradores]);
+  // Solo los trabajadores del grupo que se está cargando
   const opciones = useMemo(
     () =>
       colaboradores
+        .filter((c) => plantilla && plantillaSegunArea(c.area) === plantilla)
         .map((c) => ({ valor: c.id, etiqueta: `${c.nombres} ${c.apellidos}`.trim() + ` · ${c.cedula}` }))
         .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, "es")),
-    [colaboradores],
+    [colaboradores, plantilla],
   );
 
   const agregar = (archivos: File[]) => {
+    if (!plantilla) return;
     setItems((actuales) => {
       const nombres = new Set(actuales.map((i) => i.archivo.name));
       const nuevos = archivos
         .filter((a) => !nombres.has(a.name))
-        .map<Item>((archivo) => {
-          const invalido = validarArchivoPdf(archivo);
-          const colaborador = invalido ? null : detectarColaborador(archivo.name, porCedula);
-          return {
-            clave: `${archivo.name}-${archivo.size}-${archivo.lastModified}`,
-            archivo,
-            colaboradorId: colaborador?.id ?? "",
-            error: invalido ?? "",
-            estado: "listo",
-          };
-        });
+        .map<Item>((archivo) => ({
+          clave: `${archivo.name}-${archivo.size}-${archivo.lastModified}`,
+          archivo,
+          ...asignar(archivo, porCedula, plantilla),
+          estado: "listo",
+        }));
       return [...actuales, ...nuevos].slice(0, MAXIMO_ARCHIVOS);
     });
+  };
+
+  /** Al cambiar de grupo se vuelven a asignar los archivos que aún no se han subido. */
+  const cambiarPlantilla = (nueva: PlantillaDesprendible) => {
+    setPlantilla(nueva);
+    setItems((lista) =>
+      lista.map((i) => (i.estado === "subido" ? i : { ...i, ...asignar(i.archivo, porCedula, nueva), estado: "listo" })),
+    );
   };
 
   const actualizar = (clave: string, cambios: Partial<Item>) =>
@@ -103,7 +134,7 @@ export function CargueMasivo({ colaboradores }: { colaboradores: ColaboradorBasi
       actualizar(item.clave, { estado: "subiendo", error: "" });
       try {
         await subir.mutateAsync({
-          datos: { colaboradorId: item.colaboradorId, periodo, tipo_periodo: tipo },
+          datos: { colaboradorId: item.colaboradorId, periodo, tipo_periodo: tipo, plantilla: plantilla || undefined },
           archivo: item.archivo,
         });
         actualizar(item.clave, { estado: "subido" });
@@ -118,7 +149,54 @@ export function CargueMasivo({ colaboradores }: { colaboradores: ColaboradorBasi
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>1. Periodo de los desprendibles</CardTitle>
+          <CardTitle>1. ¿Qué desprendibles va a cargar?</CardTitle>
+          <CardDescription>
+            Los de administrativos y los de colaboradores salen en PDF separados y usan plantillas distintas.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div role="radiogroup" aria-label="Tipo de desprendible" className="grid gap-3 sm:grid-cols-2">
+            {PLANTILLAS_DESPRENDIBLE.map((p) => {
+              const activo = plantilla === p;
+              const cantidad = colaboradores.filter((c) => plantillaSegunArea(c.area) === p).length;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  role="radio"
+                  aria-checked={activo}
+                  disabled={procesando}
+                  onClick={() => cambiarPlantilla(p)}
+                  className={cn(
+                    "rounded-xl border-2 p-4 text-left transition-colors disabled:opacity-60",
+                    activo ? "border-acento bg-acento-suave" : "border-borde hover:border-borde-fuerte hover:bg-slate-50",
+                  )}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="font-display text-base font-semibold text-texto">{NOMBRES_PLANTILLA[p]}</span>
+                    <span
+                      className={cn(
+                        "flex h-5 w-5 items-center justify-center rounded-full border-2",
+                        activo ? "border-acento" : "border-borde-fuerte",
+                      )}
+                      aria-hidden
+                    >
+                      {activo ? <span className="h-2.5 w-2.5 rounded-full bg-acento" /> : null}
+                    </span>
+                  </span>
+                  <span className="mt-1 block text-sm text-texto-suave">
+                    {DESCRIPCION_PLANTILLA[p]} · {plural(cantidad, "persona", "personas")}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>2. Periodo de los desprendibles</CardTitle>
           <CardDescription>Todos los archivos de este cargue se registran con el mismo periodo y tipo.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -147,7 +225,7 @@ export function CargueMasivo({ colaboradores }: { colaboradores: ColaboradorBasi
 
       <Card>
         <CardHeader>
-          <CardTitle>2. Archivos PDF</CardTitle>
+          <CardTitle>3. Archivos PDF</CardTitle>
           <CardDescription>
             Incluya la cédula del colaborador en el nombre de cada archivo, por ejemplo{" "}
             <span className="font-mono text-xs text-texto">1098765432.pdf</span> o{" "}
@@ -156,7 +234,13 @@ export function CargueMasivo({ colaboradores }: { colaboradores: ColaboradorBasi
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <ZonaArchivos multiple onArchivos={agregar} deshabilitado={procesando} />
+          {plantilla ? (
+            <ZonaArchivos multiple onArchivos={agregar} deshabilitado={procesando} />
+          ) : (
+            <p className="rounded-xl border border-dashed border-borde-fuerte bg-slate-50 px-4 py-6 text-center text-sm text-texto-suave">
+              Primero elija en el paso 1 si va a cargar desprendibles de administrativos o de colaboradores.
+            </p>
+          )}
 
           {items.length > 0 ? (
             <>
@@ -210,9 +294,7 @@ export function CargueMasivo({ colaboradores }: { colaboradores: ColaboradorBasi
                                 className="h-9"
                               />
                             )}
-                            {item.estado === "error" && item.error ? (
-                              <p className="mt-1 text-xs text-error">{item.error}</p>
-                            ) : null}
+                            {item.error && !invalido ? <p className="mt-1 text-xs text-error">{item.error}</p> : null}
                           </TableCell>
                           <TableCell>
                             {item.estado === "subido" ? (

@@ -27,7 +27,7 @@ const ESTADOS: Record<EstadoAcceso, { etiqueta: string; variante: VarianteBadge 
 function explicacion(acceso: Acceso): string {
   switch (acceso.estado) {
     case "sin_pin":
-      return "Aún no ha creado su PIN. La primera vez entra con «Es mi primera vez», escribe su cédula y crea su PIN.";
+      return "Aún no ha creado su PIN. La primera vez ingresa con su cédula, deja el PIN vacío y crea el suyo.";
     case "pin_temporal":
       return `Debe ingresar con el PIN temporal y crear el suyo antes del ${fechaHora(acceso.pinTemporalExpira)}.`;
     case "pin_temporal_vencido":

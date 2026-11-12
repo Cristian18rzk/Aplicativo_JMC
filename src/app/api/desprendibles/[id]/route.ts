@@ -6,6 +6,7 @@ import { ErrorApi, manejarErrorApi, validarIdRegistro } from "@/lib/api";
 import { leerFormulario, leerPdf } from "@/lib/archivos";
 import { requerirAdmin, requerirSesion, verificarAccesoPropio } from "@/lib/auth/middleware";
 import { actualizarDesprendibleSchema } from "@/lib/validators/desprendible";
+import { plantillaSegunArea } from "@/types/desprendible";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -50,10 +51,13 @@ export async function PUT(request: NextRequest, { params }: Contexto) {
     const existente = await desprendiblesDb.getById(id);
     if (!existente) throw new ErrorApi(404, "Desprendible no encontrado");
 
+    // El cliente no elige la plantilla al editar: sale del área del colaborador
+    delete datos.plantilla;
     if (datos.colaboradorId && datos.colaboradorId !== existente.colaboradorId) {
-      if (!(await colaboradoresDb.getById(datos.colaboradorId))) {
-        throw new ErrorApi(404, "El colaborador seleccionado no existe");
-      }
+      const nuevo = await colaboradoresDb.getById(datos.colaboradorId);
+      if (!nuevo) throw new ErrorApi(404, "El colaborador seleccionado no existe");
+      // Si cambia de colaborador, la plantilla sigue la del nuevo dueño
+      datos.plantilla = plantillaSegunArea(nuevo.area);
     }
 
     const colaboradorId = datos.colaboradorId ?? existente.colaboradorId;

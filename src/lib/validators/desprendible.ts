@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TAMANO_MAXIMO_PDF, TIPOS_PERIODO } from "@/types/desprendible";
+import { PLANTILLAS_DESPRENDIBLE, TAMANO_MAXIMO_PDF, TIPOS_PERIODO } from "@/types/desprendible";
 
 export const periodoSchema = z
   .string({ error: "El periodo es obligatorio" })
@@ -12,6 +12,7 @@ export const desprendibleSchema = z.object({
     .regex(/^rec[a-zA-Z0-9]{14}$/, { error: "Seleccione un colaborador válido" }),
   periodo: periodoSchema,
   tipo_periodo: z.enum(TIPOS_PERIODO, { error: "Seleccione un tipo de periodo válido" }),
+  plantilla: z.enum(PLANTILLAS_DESPRENDIBLE, { error: "Seleccione el tipo de desprendible" }).optional(),
 });
 
 export const actualizarDesprendibleSchema = desprendibleSchema.partial();

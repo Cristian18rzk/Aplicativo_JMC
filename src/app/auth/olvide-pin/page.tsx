@@ -1,7 +1,7 @@
-import { ArrowLeft, KeyRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TarjetaAuth } from "@/components/auth/auth-ui";
+import { IconoLlavePin, IconoRegresar } from "@/components/auth/iconos-auth";
 import { LONGITUD_PIN_TEMPORAL } from "@/lib/auth/pin";
 
 export const metadata: Metadata = { title: "Olvidé mi PIN" };
@@ -12,7 +12,7 @@ export default function PaginaOlvidePin() {
     <TarjetaAuth
       titulo="¿Olvidaste tu PIN?"
       descripcion="No te preocupes, es fácil de recuperar."
-      icono={<KeyRound className="h-5 w-5" aria-hidden />}
+      icono={<IconoLlavePin className="h-6 w-6" />}
     >
       <ol className="space-y-4 text-base text-slate-700 dark:text-slate-200">
         {[
@@ -36,7 +36,7 @@ export default function PaginaOlvidePin() {
         href="/auth/login"
         className="mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-palma-600 text-lg font-semibold text-white hover:bg-palma-800 dark:bg-palma-600 dark:hover:bg-palma-700"
       >
-        <ArrowLeft className="h-5 w-5" aria-hidden />
+        <IconoRegresar className="h-5 w-5" />
         Volver a ingresar
       </Link>
     </TarjetaAuth>

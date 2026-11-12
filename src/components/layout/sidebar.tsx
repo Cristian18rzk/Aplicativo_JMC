@@ -52,7 +52,7 @@ export function ContenidoNavegacion({
         <Logo tamano={40} decorativo={!colapsado} />
         {!colapsado ? (
           <div className="min-w-0">
-            <p className="truncate font-display text-lg font-bold tracking-tight text-texto">JMC Nómina</p>
+            <p className="truncate font-display text-lg font-bold tracking-tight text-texto">Portal JMC</p>
             <p className="text-xs text-texto-suave">Jairo Martínez JMC S.A.S.</p>
           </div>
         ) : null}

@@ -46,7 +46,7 @@ export async function GET(request: NextRequest, { params }: Contexto) {
 /**
  * POST /api/colaboradores/[id]/acceso — Genera un PIN temporal (solo admin).
  * Sirve para cuando el colaborador olvidó su PIN o quedó bloqueado (el primer ingreso no lo necesita:
- * se hace en /auth/primer-ingreso).
+ * entra con su cédula y el PIN vacío, y crea el suyo).
  * El PIN en claro se devuelve una sola vez en esta respuesta y nunca se guarda.
  */
 export async function POST(request: NextRequest, { params }: Contexto) {

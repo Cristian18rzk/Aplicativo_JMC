@@ -1,6 +1,14 @@
 import type Airtable from "airtable";
 import type { Colaborador, ListaPaginada } from "@/types/colaborador";
-import type { Desprendible, DesprendibleInput, FiltrosDesprendibles, TipoPeriodo } from "@/types/desprendible";
+import {
+  PLANTILLAS_DESPRENDIBLE,
+  plantillaSegunArea,
+  type Desprendible,
+  type DesprendibleInput,
+  type FiltrosDesprendibles,
+  type PlantillaDesprendible,
+  type TipoPeriodo,
+} from "@/types/desprendible";
 import { fechaHoyISO, normalizarTexto, paginar } from "@/lib/utils";
 import { TABLAS, escaparFormula, leerEnlace, leerNumero, leerTexto, tabla } from "./client";
 import { esNoEncontrado, getMapa, nombreCompleto } from "./colaboradores";
@@ -40,6 +48,10 @@ function mapearDesprendible(registro: RegistroAirtable, colaboradores: Map<strin
     colaboradorCargo: colaborador?.cargo ?? "",
     periodo: leerTexto(c, "periodo"),
     tipo_periodo: (leerTexto(c, "tipo_periodo") || "Mensual") as TipoPeriodo,
+    // Registros anteriores a las plantillas no tienen el campo: se deduce del área actual
+    plantilla: (PLANTILLAS_DESPRENDIBLE as readonly string[]).includes(leerTexto(c, "plantilla"))
+      ? (leerTexto(c, "plantilla") as PlantillaDesprendible)
+      : plantillaSegunArea(colaborador?.area ?? ""),
     nombre_archivo: leerTexto(c, "nombre_archivo") || adjunto?.filename || "",
     tamano_bytes: leerNumero(c, "tamano_bytes") || adjunto?.size || 0,
     tieneArchivo: Boolean(adjunto),
@@ -53,6 +65,7 @@ function aCampos(datos: Partial<DesprendibleInput>): Partial<Airtable.FieldSet> 
   if (datos.colaboradorId !== undefined) campos.colaborador = [datos.colaboradorId];
   if (datos.periodo !== undefined) campos.periodo = datos.periodo;
   if (datos.tipo_periodo !== undefined) campos.tipo_periodo = datos.tipo_periodo;
+  if (datos.plantilla !== undefined) campos.plantilla = datos.plantilla;
   return campos;
 }
 
@@ -79,6 +92,9 @@ async function consultar(filtros: FiltrosDesprendibles): Promise<Desprendible[]>
 
   if (filtros.colaboradorId) {
     desprendibles = desprendibles.filter((d) => d.colaboradorId === filtros.colaboradorId);
+  }
+  if (filtros.plantilla) {
+    desprendibles = desprendibles.filter((d) => d.plantilla === filtros.plantilla);
   }
   if (filtros.busqueda) {
     const termino = normalizarTexto(filtros.busqueda);

@@ -130,6 +130,7 @@ const CAMPOS_EN_TABLAS_EXISTENTES = [
       texto("nombre_archivo", "Nombre original del PDF subido"),
       entero("tamano_bytes"),
       texto("cargado_por", "Administrador que subió el archivo"),
+      opciones("plantilla", ["administrativo", "colaborador"], "Plantilla del desprendible (según el área del colaborador)"),
     ],
   },
 ];

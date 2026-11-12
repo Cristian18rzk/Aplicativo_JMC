@@ -146,7 +146,7 @@ async function main() {
     });
     console.log(`✔ Administrador con cédula ${cedula} creado`);
   }
-  console.log('  Ingrese en /auth/login con su cédula, pulsando "Soy administrador".');
+  console.log("  Ingrese en /auth/login con su cédula y esta contraseña.");
 }
 
 main().catch((error) => {

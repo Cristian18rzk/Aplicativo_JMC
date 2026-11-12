@@ -40,14 +40,13 @@ npm run dev                  # http://localhost:3000
 
 | Paso | Quién | Qué pasa |
 | --- | --- | --- |
-| 1 | Admin | Crea al colaborador. Se crea su cuenta de acceso, todavía sin PIN. |
-| 2 | Admin | En la ficha, tarjeta **Acceso al aplicativo**, pulsa **Generar PIN temporal**. Aparece un PIN de 6 números, una sola vez, que vence en 7 días. Se lo entrega en persona. |
-| 3 | Colaborador | Ingresa con su cédula y el PIN temporal. El aplicativo lo lleva a `/auth/crear-pin`, donde elige su PIN de 4 números, y entra directamente. |
-| ¿Olvidó el PIN o quedó bloqueado? | Admin | **Restablecer PIN** en la ficha: se repite desde el paso 2. El PIN anterior deja de servir, se cierran sus sesiones y se levanta cualquier bloqueo. |
+| 1 | Admin | Crea al colaborador (o lo importa con `npm run colaboradores:importar`). Se crea su cuenta de acceso, todavía sin PIN. |
+| 2 | Colaborador | Primer ingreso: escribe su cédula, deja el PIN vacío y pulsa **Ingresar**. El aplicativo lo lleva a `/auth/crear-pin`, donde elige su PIN de 4 números, y entra directamente. Este camino se cierra en cuanto la cuenta tiene PIN. |
+| ¿Olvidó el PIN o quedó bloqueado? | Admin | En la ficha, tarjeta **Acceso al aplicativo**, pulsa **Restablecer PIN**: aparece un PIN temporal de 6 números, una sola vez, que vence en 7 días. El colaborador ingresa con él y crea uno nuevo. El PIN anterior deja de servir, se cierran sus sesiones y se levanta cualquier bloqueo. |
 
 El PIN no puede ser un número repetido (1111), seguido (1234, 4321), un par repetido (1212), un año (1930–2039), uno de los PIN más comunes ni una parte de la cédula. Las reglas están en [src/lib/auth/pin.ts](src/lib/auth/pin.ts).
 
-El admin no usa PIN: en el login pulsa **Soy administrador** y escribe su contraseña. Su contraseña solo se asigna o cambia con `npm run auth:seed`. Desde el panel no se puede generar un PIN para una ficha con rol admin.
+Todos usan el mismo formulario (cédula + PIN). El aplicativo lleva al admin a `/admin` y al colaborador a `/colaborador` según su rol. La clave del admin solo se asigna o cambia con `npm run auth:seed`; desde el panel no se puede generar un PIN para una ficha con rol admin.
 
 Si se cambia la cédula, el rol o el estado de una ficha, el cambio se refleja en la cuenta y se cierran sus sesiones. El correo de la ficha es opcional y ya no se usa para ingresar.
 

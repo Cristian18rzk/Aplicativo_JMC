@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { AlertCircle, CheckCircle2, Eye, EyeOff, Info } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info } from "lucide-react";
 import {
   forwardRef,
   useEffect,
@@ -14,6 +14,7 @@ import {
 } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
+import { IconoOjo, IconoOjoCerrado } from "./iconos-auth";
 
 /*
  * Primitivas visuales de las pantallas de autenticación — Sistema de Diseño JMC v2, con modo oscuro.
@@ -39,22 +40,34 @@ export function TarjetaAuth({
   return (
     <section
       aria-labelledby="titulo-auth"
-      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_30px_60px_-30px_rgba(43,45,44,0.25)] sm:p-8 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none"
+      className={cn(
+        "relative overflow-hidden rounded-[28px] p-6 text-slate-900 sm:p-9",
+        // Superficie Arena cálida sobre la escena; en oscuro, vidrio ahumado
+        "bg-[#FFFDF9]/[0.97] shadow-[0_40px_80px_-30px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.5)_inset]",
+        "dark:bg-slate-950/80 dark:text-slate-100 dark:shadow-[0_40px_80px_-30px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.08)_inset] dark:backdrop-blur-xl",
+      )}
     >
-      <header className="mb-6">
+      {/* Filete superior: sol → oro → palma (los tres colores de la marca) */}
+      <div
+        className="absolute inset-x-0 top-0 h-1.5 bg-[linear-gradient(90deg,#F2A042_0%,#B8955A_50%,#2E6B3F_100%)]"
+        aria-hidden
+      />
+      <header className="mb-7">
         {icono ? (
-          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-palma-100 text-palma-600 dark:bg-palma-950 dark:text-palma-300">
+          <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#FDEEE0_0%,#F5EEE2_100%)] text-sol-oscuro ring-1 ring-sol/20 dark:bg-[linear-gradient(135deg,rgba(232,120,42,0.18)_0%,rgba(184,149,90,0.12)_100%)] dark:text-sol-claro dark:ring-sol/30">
             {icono}
           </div>
         ) : null}
         <h1
           id="titulo-auth"
           tabIndex={-1}
-          className="font-display text-2xl font-bold tracking-tight text-slate-900 outline-none dark:text-slate-50"
+          className="font-display text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900 outline-none dark:text-slate-50"
         >
           {titulo}
         </h1>
-        {descripcion ? <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-300">{descripcion}</p> : null}
+        {descripcion ? (
+          <p className="mt-2 text-[15px] leading-relaxed text-slate-600 dark:text-slate-300">{descripcion}</p>
+        ) : null}
       </header>
       {children}
     </section>
@@ -69,10 +82,12 @@ export interface CampoAuthProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   ayuda?: ReactNode;
   /** Muestra el botón para ver/ocultar la contraseña. */
   conmutarVisibilidad?: boolean;
+  /** Ícono decorativo al inicio del campo. */
+  icono?: ReactNode;
 }
 
 export const CampoAuth = forwardRef<HTMLInputElement, CampoAuthProps>(function CampoAuth(
-  { label, error, ayuda, conmutarVisibilidad, type = "text", className, onKeyUp, ...props },
+  { label, error, ayuda, conmutarVisibilidad, icono, type = "text", className, onKeyUp, ...props },
   ref,
 ) {
   const id = useId();
@@ -90,10 +105,18 @@ export const CampoAuth = forwardRef<HTMLInputElement, CampoAuthProps>(function C
 
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-slate-800 dark:text-slate-200">
+      <label htmlFor={id} className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
         {label}
       </label>
-      <div className="relative">
+      <div className="group relative">
+        {icono ? (
+          <span
+            className="pointer-events-none absolute inset-y-0 left-0 flex w-12 items-center justify-center text-slate-400 transition-colors group-focus-within:text-palma-600 dark:text-slate-500 dark:group-focus-within:text-palma-400"
+            aria-hidden
+          >
+            {icono}
+          </span>
+        ) : null}
         <input
           ref={ref}
           id={id}
@@ -106,13 +129,14 @@ export const CampoAuth = forwardRef<HTMLInputElement, CampoAuthProps>(function C
           }}
           className={cn(
             // Foco del sistema: borde 1.5px Verde Palma + halo de 4px
-            "block h-11 w-full rounded-lg border bg-white px-3 text-base text-slate-900 transition-[border-color,box-shadow] sm:text-sm",
-            "placeholder:text-slate-400 focus:outline-none focus:ring-4",
-            "dark:bg-slate-950 dark:text-slate-50 dark:placeholder:text-slate-500",
+            "block h-11 w-full rounded-xl border bg-slate-50 px-3 text-base text-slate-900 transition-[border-color,box-shadow,background-color] sm:text-sm",
+            "placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-4",
+            "dark:bg-white/5 dark:text-slate-50 dark:placeholder:text-slate-500 dark:focus:bg-white/[0.08]",
             error
               ? "border-error focus:border-error focus:ring-error/15 dark:border-red-400 dark:focus:ring-red-400/25"
-              : "border-slate-300 focus:border-palma-600 focus:shadow-[0_0_0_0.5px_var(--color-palma-600)] focus:ring-palma-100 dark:border-slate-700 dark:focus:border-palma-400 dark:focus:ring-palma-400/20",
-            conmutarVisibilidad && "pr-11",
+              : "border-slate-200 hover:border-slate-300 focus:border-palma-600 focus:shadow-[0_0_0_0.5px_var(--color-palma-600)] focus:ring-palma-100 dark:border-white/10 dark:hover:border-white/20 dark:focus:border-palma-400 dark:focus:ring-palma-400/20",
+            icono && "pl-12",
+            conmutarVisibilidad && "pr-12",
             className,
           )}
           {...props}
@@ -124,9 +148,9 @@ export const CampoAuth = forwardRef<HTMLInputElement, CampoAuthProps>(function C
             aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
             aria-pressed={visible}
             aria-controls={id}
-            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-500 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-palma-600 dark:text-slate-400 dark:hover:text-slate-100"
+            className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-xl text-slate-500 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-palma-600 dark:text-slate-400 dark:hover:text-slate-100"
           >
-            {visible ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+            {visible ? <IconoOjoCerrado className="h-[22px] w-[22px]" /> : <IconoOjo className="h-[22px] w-[22px]" />}
           </button>
         ) : null}
       </div>
@@ -177,9 +201,10 @@ export function BotonAuth({
       aria-busy={cargando || undefined}
       aria-disabled={disabled || cargando || undefined}
       className={cn(
-        "inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition-colors",
-        "bg-palma-600 hover:bg-palma-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-palma-600",
-        "dark:bg-palma-600 dark:hover:bg-palma-700 dark:focus-visible:outline-palma-400",
+        "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white",
+        "bg-[linear-gradient(180deg,#357a48_0%,#2E6B3F_100%)] shadow-[0_10px_24px_-10px_rgba(46,107,63,0.8),inset_0_1px_0_rgba(255,255,255,0.18)]",
+        "hover:bg-[linear-gradient(180deg,#2E6B3F_0%,#1F4D2C_100%)]",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-palma-600 dark:focus-visible:outline-palma-400",
         "disabled:cursor-not-allowed disabled:opacity-70",
         className,
       )}

@@ -19,6 +19,7 @@ const urlLista = (filtros: FiltrosDesprendibles) =>
     periodo: filtros.periodo,
     busqueda: filtros.busqueda,
     colaboradorId: filtros.colaboradorId,
+    plantilla: filtros.plantilla,
   })}`;
 
 /** Lista de desprendibles (admin) con filtros por periodo y búsqueda por colaborador. */

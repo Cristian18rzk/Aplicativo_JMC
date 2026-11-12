@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, ExternalLink, FileText, FileUp, Pencil, Trash, Upload, X } from "lucide-react";
+import { Download, ExternalLink, FileText, FileUp, LayoutTemplate, Pencil, Trash, Upload, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { DesprendibleForm } from "@/components/desprendibles/desprendible-form";
@@ -13,6 +13,7 @@ import { CargandoPagina } from "@/components/ui/loading-spinner";
 import { Modal } from "@/components/ui/modal";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableSkeleton } from "@/components/ui/table";
 import { useColaboradores } from "@/hooks/use-colaboradores";
 import {
@@ -24,7 +25,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { mensajeDeError } from "@/lib/api-cliente";
 import { formatDate, formatPeriodo, formatTamano } from "@/lib/utils";
-import type { Desprendible, DesprendibleInput } from "@/types/desprendible";
+import {
+  NOMBRES_PLANTILLA,
+  PLANTILLAS_DESPRENDIBLE,
+  type Desprendible,
+  type DesprendibleInput,
+  type PlantillaDesprendible,
+} from "@/types/desprendible";
 
 const POR_PAGINA = 15;
 
@@ -37,6 +44,7 @@ export default function PaginaDesprendibles() {
   const [pagina, setPagina] = useState(1);
   const [periodo, setPeriodo] = useState("");
   const [busqueda, setBusqueda] = useState("");
+  const [plantilla, setPlantilla] = useState<PlantillaDesprendible | "">("");
   const [dialogo, setDialogo] = useState<Dialogo>(null);
 
   const { data, isLoading, isFetching, isError, error } = useDesprendibles({
@@ -44,6 +52,7 @@ export default function PaginaDesprendibles() {
     porPagina: POR_PAGINA,
     periodo,
     busqueda,
+    plantilla,
   });
 
   const necesitaColaboradores = dialogo?.tipo === "nuevo" || dialogo?.tipo === "editar";
@@ -92,6 +101,10 @@ export default function PaginaDesprendibles() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-texto-suave">Cargue y administre los desprendibles de pago de cada colaborador.</p>
         <div className="flex flex-col gap-2 sm:flex-row">
+          <Link href="/admin/desprendibles/plantillas" className={clasesBoton("ghost")}>
+            <LayoutTemplate className="h-4 w-4" aria-hidden />
+            Plantillas
+          </Link>
           <Link href="/admin/desprendibles/cargar" className={clasesBoton("secondary")}>
             <FileUp className="h-4 w-4" aria-hidden />
             Cargue masivo
@@ -104,7 +117,7 @@ export default function PaginaDesprendibles() {
       </div>
 
       <Card>
-        <div className="grid gap-3 border-b border-borde p-4 sm:grid-cols-3">
+        <div className="grid gap-3 border-b border-borde p-4 sm:grid-cols-2 lg:grid-cols-4">
           <SearchInput
             className="sm:col-span-2"
             placeholder="Buscar por colaborador o cédula…"
@@ -131,6 +144,16 @@ export default function PaginaDesprendibles() {
               </Button>
             ) : null}
           </div>
+          <Select
+            aria-label="Filtrar por tipo de desprendible"
+            placeholder="Todos los tipos"
+            opciones={PLANTILLAS_DESPRENDIBLE.map((p) => ({ valor: p, etiqueta: NOMBRES_PLANTILLA[p] }))}
+            value={plantilla}
+            onChange={(e) => {
+              setPlantilla(e.target.value as PlantillaDesprendible | "");
+              setPagina(1);
+            }}
+          />
         </div>
 
         {isError ? (
@@ -140,8 +163,8 @@ export default function PaginaDesprendibles() {
             icono={FileText}
             titulo="No hay desprendibles"
             descripcion={
-              periodo || busqueda
-                ? "No hay resultados para los filtros aplicados."
+              periodo || busqueda || plantilla
+                ?"No hay resultados para los filtros aplicados."
                 : "Suba un desprendible individual o use el cargue masivo de PDF."
             }
           />
@@ -165,7 +188,12 @@ export default function PaginaDesprendibles() {
                     <TableRow key={d.id}>
                       <TableCell>
                         <p className="font-medium">{d.colaboradorNombre}</p>
-                        <p className="text-xs text-texto-suave">C.C. {d.colaboradorCedula}</p>
+                        <p className="flex flex-wrap items-center gap-1.5 text-xs text-texto-suave">
+                          {d.colaboradorCedula}
+                          <Badge variante={d.plantilla === "administrativo" ? "oro" : "neutral"}>
+                            {NOMBRES_PLANTILLA[d.plantilla]}
+                          </Badge>
+                        </p>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <p>{formatPeriodo(d.periodo)}</p>

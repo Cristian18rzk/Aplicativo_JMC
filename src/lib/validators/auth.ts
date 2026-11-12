@@ -9,15 +9,13 @@ export const cedulaSchema = z
   .pipe(z.string().regex(/^\d{5,12}$/, { error: "La cédula debe tener entre 5 y 12 números" }));
 
 /**
- * Login: cédula + secreto (PIN del colaborador, PIN temporal o contraseña del admin).
- * No se aplica la política del PIN: no se revelan reglas y el admin usa una contraseña.
+ * Login: cédula + secreto (PIN del colaborador, PIN temporal o clave del admin).
+ * El PIN puede ir vacío: en el primer ingreso la cuenta aún no tiene PIN y se envía a crearlo.
+ * No se aplica la política del PIN: no se revelan reglas.
  */
 export const loginSchema = z.object({
   cedula: cedulaSchema,
-  password: z
-    .string({ error: "Escribe tu PIN" })
-    .min(1, { error: "Escribe tu PIN" })
-    .max(LONGITUD_MAXIMA_SECRETO, { error: "Credenciales inválidas" }),
+  password: z.string().max(LONGITUD_MAXIMA_SECRETO, { error: "Credenciales inválidas" }),
 });
 
 /** PIN nuevo (sin la verificación contra la cédula, que se hace donde se conoce la cédula). */

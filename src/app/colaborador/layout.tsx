@@ -36,7 +36,7 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
           <Link href="/colaborador" className="flex items-center gap-2.5">
             <Logo tamano={40} decorativo />
             <span className="leading-tight">
-              <span className="block font-display text-base font-bold tracking-tight text-texto">JMC Nómina</span>
+              <span className="block font-display text-base font-bold tracking-tight text-texto">Portal JMC</span>
               <span className="hidden text-xs text-texto-suave sm:block">Portal del colaborador</span>
             </span>
           </Link>

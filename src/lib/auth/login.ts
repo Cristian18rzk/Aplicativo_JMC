@@ -14,7 +14,7 @@ import {
 import { compararSenuelo, verificarPassword } from "./password";
 import * as rateLimit from "./rate-limit";
 import { esperar } from "./request";
-import { cuentaHabilitada } from "./sesiones";
+import { cuentaHabilitada, fichaActiva } from "./sesiones";
 import { claveIdentificador } from "./tokens";
 
 export type ResultadoLogin =
@@ -110,7 +110,22 @@ export async function autenticar(cedula: string, password: string, ctx: Contexto
 
   const usuario = await getUsuarioPorCedula(cedula);
 
-  // 3) Cédula inexistente o cuenta que aún no ha creado su PIN (primer ingreso pendiente)
+  // 3a) Primer ingreso: la cuenta existe, está habilitada y nunca ha tenido PIN → a crearlo.
+  //     Este camino se cierra en cuanto crea su PIN; después solo un PIN temporal del admin lo cambia.
+  if (
+    usuario &&
+    !usuario.passwordHash &&
+    usuario.activo &&
+    !usuario.lockedPermanently &&
+    usuario.lockedUntil <= Date.now() &&
+    (await fichaActiva(usuario))
+  ) {
+    await actualizarUsuario(usuario.id, { debeCambiarPin: true, pinTemporalExpira: 0 });
+    auditar({ evento: "primer_ingreso", cedula, usuarioId: usuario.id, ...ctx, exito: true, detalle: "Primer ingreso: va a crear su PIN" });
+    return { ok: false, motivo: "cambiar_pin", usuario: { ...usuario, debeCambiarPin: true } };
+  }
+
+  // 3b) Cédula inexistente o cuenta sin PIN que no está habilitada
   if (!usuario || !usuario.passwordHash) {
     await compararSenuelo(password);
     await rateLimit.incrementar(claveFallos, VENTANA_FALLOS_CUENTA_MS);
@@ -120,7 +135,7 @@ export async function autenticar(cedula: string, password: string, ctx: Contexto
       usuarioId: usuario?.id,
       ...ctx,
       exito: false,
-      detalle: usuario ? "Cuenta sin PIN: debe crearlo en «Es mi primera vez»" : "Cédula no registrada",
+      detalle: usuario ? "Cuenta sin PIN, inactiva o bloqueada" : "Cédula no registrada",
     });
     return { ok: false, motivo: "credenciales" };
   }
