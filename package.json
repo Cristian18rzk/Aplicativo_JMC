@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "type-check": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "auth:setup": "node scripts/setup-airtable.mjs",
     "auth:seed": "node scripts/seed-admin.mjs",
     "auth:migrar": "node scripts/migrar-colaboradores.mjs",
@@ -35,14 +37,15 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
-    "@types/node": "^20",
+    "@types/node": "^22.20.5",
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "tailwindcss": "4.3.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.1.0"
   },
   "engines": {
     "node": ">=20.0.0"
