@@ -1,126 +1,92 @@
 "use client";
 
-import { Download, ExternalLink, FileText, X } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { AccionesPdf, nombrePeriodo } from "@/components/portal/acciones-pdf";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableSkeleton } from "@/components/ui/table";
 import { useMisDesprendibles } from "@/hooks/use-desprendibles";
 import { mensajeDeError } from "@/lib/api-cliente";
 import { formatDate, formatPeriodo } from "@/lib/utils";
 
-const claseAccion = "rounded-lg p-2 text-texto-suave hover:bg-slate-100 hover:text-acento";
-
+/** Un desprendible por tarjeta, del más reciente al más antiguo, con botones grandes de Descargar y Ver. */
 export default function MisDesprendibles() {
   const [pagina, setPagina] = useState(1);
-  const [periodo, setPeriodo] = useState("");
-
-  const { data, isLoading, isError, error } = useMisDesprendibles({ pagina, porPagina: 12, periodo });
+  const { data, isLoading, isError, error } = useMisDesprendibles({ pagina, porPagina: 12 });
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-texto">Mis desprendibles</h1>
-          <p className="text-sm text-texto-suave">Sus comprobantes de pago por periodo.</p>
-        </div>
-        <div className="flex items-end gap-2">
-          <div className="w-full sm:w-48">
-            <Input
-              type="month"
-              label="Periodo"
-              value={periodo}
-              onChange={(e) => {
-                setPeriodo(e.target.value);
-                setPagina(1);
-              }}
-            />
-          </div>
-          {periodo ? (
-            <Button variante="ghost" onClick={() => setPeriodo("")} aria-label="Quitar filtro">
-              <X className="h-4 w-4" />
-            </Button>
-          ) : null}
-        </div>
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-display text-[1.75rem] leading-tight font-bold tracking-tight text-palma-900">Mis desprendibles de pago</h1>
+        <p className="mt-1 text-[17px] text-texto-suave">Toca Descargar para guardar el pago en tu celular.</p>
       </div>
 
-      <Card>
-        {isError ? (
-          <EmptyState titulo="Error al cargar" descripcion={mensajeDeError(error)} />
-        ) : !isLoading && data?.datos.length === 0 ? (
+      {isError ? (
+        <div className="rounded-[20px] bg-white">
+          <EmptyState titulo="No pudimos cargar tus desprendibles" descripcion={mensajeDeError(error)} />
+        </div>
+      ) : isLoading ? (
+        <div className="space-y-3" aria-busy="true" aria-label="Cargando tus desprendibles">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-40 animate-pulse rounded-[20px] bg-white/70" />
+          ))}
+        </div>
+      ) : !data?.datos.length ? (
+        <div className="rounded-[20px] bg-white">
           <EmptyState
             icono={FileText}
-            titulo="Sin desprendibles"
-            descripcion={periodo ? "No hay desprendibles para el periodo seleccionado." : "Aún no tiene desprendibles publicados."}
+            titulo="Todavía no tienes desprendibles"
+            descripcion="Cuando la empresa suba tu pago, aparece aquí para que lo descargues."
           />
-        ) : (
-          <Table>
-            <TableHeader>
-              <tr>
-                <TableHead>Periodo</TableHead>
-                <TableHead className="hidden sm:table-cell">Publicado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </tr>
-            </TableHeader>
-            {isLoading ? (
-              <TableSkeleton columnas={3} />
-            ) : (
-              <TableBody>
-                {data?.datos.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell>
-                      <p className="font-medium">{formatPeriodo(d.periodo)}</p>
-                      <Badge variante={d.tipo_periodo === "Mensual" ? "default" : "neutral"}>{d.tipo_periodo}</Badge>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">{formatDate(d.fecha_carga)}</TableCell>
-                    <TableCell>
-                      {d.tieneArchivo ? (
-                        <div className="flex justify-end gap-0.5">
-                          <a
-                            href={`/api/desprendibles/${d.id}/pdf`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={claseAccion}
-                            aria-label={`Ver desprendible de ${formatPeriodo(d.periodo)} en otra pestaña`}
-                            title="Ver"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                          <a
-                            href={`/api/desprendibles/${d.id}/pdf?descargar=1`}
-                            className={claseAccion}
-                            aria-label={`Descargar desprendible de ${formatPeriodo(d.periodo)}`}
-                            title="Descargar PDF"
-                          >
-                            <Download className="h-4 w-4" />
-                          </a>
-                        </div>
-                      ) : (
-                        <p className="text-right text-xs text-texto-suave">En preparación</p>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            )}
-          </Table>
-        )}
-        {data && data.total > 0 ? (
-          <div className="border-t border-borde">
-            <Pagination
-              pagina={data.pagina}
-              totalPaginas={data.totalPaginas}
-              total={data.total}
-              porPagina={data.porPagina}
-              onCambiar={setPagina}
-            />
-          </div>
-        ) : null}
-      </Card>
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {data.datos.map((d, i) => {
+            const reciente = pagina === 1 && i === 0;
+            return (
+              <li
+                key={d.id}
+                className={
+                  reciente
+                    ? "rounded-[20px] border-2 border-palma-300 bg-white px-5 py-4"
+                    : "rounded-[20px] border border-[#D5DFD0] bg-white px-5 py-4"
+                }
+              >
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="font-display text-xl font-bold tracking-tight text-texto">{formatPeriodo(d.periodo)}</h2>
+                    <p className="text-base text-texto-suave">{nombrePeriodo(d.tipo_periodo)}</p>
+                  </div>
+                  {reciente ? (
+                    <span className="shrink-0 rounded-full bg-palma-100 px-3 py-1 text-sm font-semibold text-palma-800">El más nuevo</span>
+                  ) : (
+                    <span className="shrink-0 pt-1 text-sm text-texto-suave">Subido el {formatDate(d.fecha_carga)}</span>
+                  )}
+                </div>
+                {d.tieneArchivo ? (
+                  <AccionesPdf url={`/api/desprendibles/${d.id}/pdf`} queEs={`el desprendible de ${formatPeriodo(d.periodo)}`} />
+                ) : (
+                  <p className="rounded-xl bg-sol-suave px-4 py-3 text-base text-sol-oscuro">
+                    El archivo se está preparando. Vuelve a mirar más tarde.
+                  </p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {data && data.totalPaginas > 1 ? (
+        <div className="rounded-[20px] bg-white">
+          <Pagination
+            pagina={data.pagina}
+            totalPaginas={data.totalPaginas}
+            total={data.total}
+            porPagina={data.porPagina}
+            onCambiar={setPagina}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
