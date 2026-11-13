@@ -1,6 +1,6 @@
 "use client";
 
-import { FileUp, Search } from "lucide-react";
+import { CircleCheck, FileUp, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { cn, formatNumber } from "@/lib/utils";
@@ -10,7 +10,7 @@ import type { PalmaLote } from "@/types/resumen";
 /*
  * Planilla del mes: todos los colaboradores activos con su situación en el periodo, con nombre visible.
  * Dos lentes sobre la misma planilla (desprendibles y acceso al portal), filtro por situación y búsqueda.
- * El surco de cada plantilla tiene una franja por persona: el avance se lee sin contar.
+ * Arriba, una frase dice cómo va el mes y qué hacer; cada grupo muestra "x de y" con una barra fina.
  */
 
 type Lente = "desprendibles" | "acceso";
@@ -24,9 +24,6 @@ const COLOR: Record<Estado, string> = {
   admin: "#7FB08C",
   pendiente: "#DCE5D8",
 };
-
-/** Orden en el surco: lo resuelto primero, lo pendiente al final. */
-const ORDEN: Record<Estado, number> = { listo: 0, admin: 1, temporal: 2, bloqueado: 3, pendiente: 4 };
 
 /** Etiqueta junto al nombre solo para las situaciones que piden atención especial. */
 const ETIQUETA: Partial<Record<Estado, { texto: string; clase: string }>> = {
@@ -53,17 +50,6 @@ const normalizar = (s: string) =>
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase();
-
-function Surco({ estados }: { estados: Estado[] }) {
-  const ordenados = [...estados].sort((a, b) => ORDEN[a] - ORDEN[b]);
-  return (
-    <div className="flex h-3 w-full gap-px overflow-hidden rounded-[3px]" aria-hidden>
-      {ordenados.map((e, i) => (
-        <span key={i} className="min-w-0 flex-1 transition-colors duration-300" style={{ background: COLOR[e] }} />
-      ))}
-    </div>
-  );
-}
 
 export function LoteDelMes({ lote, mes }: { lote: PalmaLote[]; mes: string }) {
   const [lente, setLente] = useState<Lente>("desprendibles");
@@ -98,7 +84,28 @@ export function LoteDelMes({ lote, mes }: { lote: PalmaLote[]; mes: string }) {
     );
   const hayVisibles = grupos.some((g) => visibles(g.personas).length > 0);
 
-  const textoListo = lente === "desprendibles" ? "ya tienen su desprendible" : "ya crearon su PIN";
+  const completo = total > 0 && faltan === 0;
+  const resumen: { titulo: string; detalle: string; accion?: { href: string; texto: string } } =
+    lente === "desprendibles"
+      ? listos === 0
+        ? {
+            titulo: `Aún no hay desprendibles de ${mes}`,
+            detalle: "Cargue el PDF del programa de nómina y el aplicativo le entrega a cada persona el suyo.",
+            accion: { href: "/admin/desprendibles/cargar", texto: "Cargar desprendibles" },
+          }
+        : completo
+          ? { titulo: `Todos tienen su desprendible de ${mes}`, detalle: `${formatNumber(total)} de ${formatNumber(total)} personas.` }
+          : {
+              titulo: `Faltan ${formatNumber(faltan)} desprendibles de ${mes}`,
+              detalle: `${formatNumber(listos)} de ${formatNumber(total)} personas ya tienen el suyo.`,
+              accion: { href: "/admin/desprendibles/cargar", texto: "Cargar los que faltan" },
+            }
+      : completo
+        ? { titulo: "Todos ya entran al portal", detalle: `${formatNumber(total)} de ${formatNumber(total)} personas crearon su PIN.` }
+        : {
+            titulo: `Faltan ${formatNumber(faltan)} personas por entrar al portal`,
+            detalle: "Genere un PIN temporal desde la ficha de cada persona y entrégueselo; con él crean su propio PIN.",
+          };
   const vacio = consulta
     ? `Nadie coincide con «${busqueda.trim()}» en esta vista.`
     : filtro === "faltan"
@@ -123,10 +130,6 @@ export function LoteDelMes({ lote, mes }: { lote: PalmaLote[]; mes: string }) {
           <h3 id="titulo-lote" className="font-display text-lg font-bold tracking-tight text-palma-900">
             Planilla de {mes}
           </h3>
-          <p className="mt-1 text-sm text-texto-suave">
-            <span className="font-display text-base font-bold text-palma-900 tabular-nums">{formatNumber(listos)}</span> de{" "}
-            {formatNumber(total)} {textoListo}
-          </p>
         </div>
         <div role="radiogroup" aria-label="Qué revisar en la planilla" className="inline-flex shrink-0 self-start rounded-xl bg-[#EEF3EC] p-1">
           {(
@@ -152,20 +155,55 @@ export function LoteDelMes({ lote, mes }: { lote: PalmaLote[]; mes: string }) {
         </div>
       </div>
 
-      {/* Surcos de avance por plantilla */}
-      <dl className="grid gap-x-8 gap-y-3 px-5 pt-5 pb-4 md:grid-cols-2">
-        {grupos.map((g) => (
-          <div key={g.plantilla} className="min-w-0">
-            <div className="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
-              <dt className="font-semibold text-palma-900">{NOMBRES_PLANTILLA[g.plantilla]}</dt>
-              <dd className="text-texto-suave tabular-nums">
-                <span className="font-semibold text-texto">{formatNumber(g.listos)}</span> de {formatNumber(g.total)}
-              </dd>
-            </div>
-            <Surco estados={g.personas.map((p) => p.estado)} />
-          </div>
-        ))}
-      </dl>
+      {/* Cómo va el mes, en palabras, y el avance de cada grupo */}
+      <div className="grid gap-5 px-5 pt-4 pb-5 md:grid-cols-[minmax(0,1fr)_minmax(0,380px)] md:items-center">
+        <div aria-live="polite">
+          <p className="flex items-center gap-2 font-display text-[1.375rem] leading-snug font-bold tracking-tight text-palma-900">
+            {completo ? <CircleCheck className="h-6 w-6 shrink-0 text-acento" aria-hidden /> : null}
+            {resumen.titulo}
+          </p>
+          <p className="mt-1 max-w-md text-sm text-texto-suave">{resumen.detalle}</p>
+          {resumen.accion ? (
+            <Link
+              href={resumen.accion.href}
+              className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl bg-sol px-4 text-sm font-semibold text-[#2B1606] hover:bg-sol-claro"
+            >
+              <FileUp className="h-4 w-4" aria-hidden />
+              {resumen.accion.texto}
+            </Link>
+          ) : null}
+        </div>
+
+        <ul className="space-y-3.5 rounded-2xl bg-[#F4F7F2] px-4 py-4">
+          {grupos.map((g) => {
+            const pendientes = g.total - g.listos;
+            const porcentaje = g.total ? Math.round((g.listos / g.total) * 100) : 0;
+            return (
+              <li key={g.plantilla}>
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="font-semibold text-texto">{NOMBRES_PLANTILLA[g.plantilla]}</span>
+                  <span className="text-texto-suave tabular-nums">
+                    <span className="font-semibold text-palma-900">{formatNumber(g.listos)}</span> de {formatNumber(g.total)}
+                  </span>
+                </div>
+                <div
+                  className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#DCE5D8]"
+                  role="progressbar"
+                  aria-label={NOMBRES_PLANTILLA[g.plantilla]}
+                  aria-valuemin={0}
+                  aria-valuemax={g.total}
+                  aria-valuenow={g.listos}
+                >
+                  <div className="h-full rounded-full bg-acento transition-[width] duration-500" style={{ width: `${porcentaje}%` }} />
+                </div>
+                <p className={cn("mt-1 text-xs", pendientes ? "text-texto-suave" : "font-medium text-acento")}>
+                  {pendientes ? `Faltan ${formatNumber(pendientes)}` : "Completo"}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
 
       {/* Filtro y búsqueda */}
       <div className="flex flex-col gap-3 border-y border-[#E3EAE0] bg-[#F7FAF6] px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -201,15 +239,6 @@ export function LoteDelMes({ lote, mes }: { lote: PalmaLote[]; mes: string }) {
               className="h-9 w-full rounded-lg border border-[#D5DFD0] bg-white pr-3 pl-9 text-sm text-texto focus:border-acento"
             />
           </label>
-          {lente === "desprendibles" && faltan > 0 ? (
-            <Link
-              href="/admin/desprendibles/cargar"
-              className="hidden h-9 shrink-0 items-center gap-1.5 rounded-lg bg-sol px-3 text-sm font-semibold text-[#2B1606] hover:bg-sol-claro sm:inline-flex"
-            >
-              <FileUp className="h-4 w-4" aria-hidden />
-              Cargar
-            </Link>
-          ) : null}
         </div>
       </div>
 
