@@ -94,7 +94,8 @@ export function ContenidoNavegacion({
             {!colapsado ? (
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-white">{usuario.nombre}</p>
-                <p className="text-xs text-palma-200/80">Administrador</p>
+                {/* Un administrador sin ficha de colaborador es el superadministrador (no figura en la nómina) */}
+                <p className="text-xs text-palma-200/80">{usuario.id ? "Administrador" : "Superadministrador"}</p>
               </div>
             ) : null}
           </div>
