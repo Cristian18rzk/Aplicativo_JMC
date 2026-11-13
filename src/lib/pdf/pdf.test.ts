@@ -4,6 +4,7 @@ import { IDS, crearColaborador } from "@test/fabricas";
 import { nombreArchivoCertificado, renderizarCertificadoPdf } from "@/components/certificados/certificado-pdf";
 import type { DatosEmpresa } from "@/lib/empresa";
 import { PLANTILLAS_DESPRENDIBLE } from "@/types/desprendible";
+import { extraerPaginas } from "@/lib/lector/texto-pdf";
 import { CONTENIDO_EJEMPLO, renderizarDesprendiblePdf } from "./desprendibles";
 
 const empresa: DatosEmpresa = {
@@ -40,6 +41,26 @@ describe("PDF", () => {
       },
     });
     expect(esPdf(buffer)).toBe(true);
+  });
+
+  it("el certificado dice contrato indefinido aunque la ficha diga otro tipo", async () => {
+    const colaborador = crearColaborador({ tipo_contrato: "Obra o labor" });
+    const buffer = await renderizarCertificadoPdf({
+      empresa,
+      certificado: {
+        id: IDS.certificado,
+        colaboradorId: colaborador.id,
+        colaboradorNombre: "Persona De Prueba",
+        colaboradorCedula: colaborador.cedula,
+        tipo: "Laboral",
+        fecha_generacion: "2026-11-11",
+        generado_por: "Admin",
+        contenido: { colaborador, dirigidoA: "A QUIEN INTERESE", textoAdicional: "" },
+      },
+    });
+    const textos = (await extraerPaginas(new Uint8Array(buffer)))[0].items.map((i) => i.texto);
+    expect(textos).toContain("Indefinido");
+    expect(textos.join(" ")).not.toContain("Obra o labor");
   });
 
   it("genera el certificado aunque falte la instantánea de datos", async () => {

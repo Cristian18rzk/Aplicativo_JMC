@@ -3,8 +3,8 @@
  * logo y razón social en Forte arriba, "C E R T I F I C A", datos en Arial de 13 pt, firma del gerente y
  * pie con la oficina). Las posiciones están medidas sobre el certificado original (pt, desde arriba).
  *
- * Datos que varían: nombre, documento y lugar de expedición, fecha de ingreso, cargo, tipo de contrato
- * y fecha de expedición. El cargo del personal de campo es "Auxiliar de Campo" (como en la nómina); el
+ * Datos que varían: nombre, documento y lugar de expedición, fecha de ingreso, cargo y fecha de
+ * expedición. El tipo de contrato es siempre "Indefinido". El cargo del personal de campo es "Auxiliar de Campo" (como en la nómina); el
  * de administrativos y operadores es el de su ficha (Gerente, Supervisora, Operador).
  */
 import { randomBytes } from "node:crypto";
@@ -27,6 +27,8 @@ Font.register({
 
 /** Membrete y firma del certificado oficial: no dependen de la persona. */
 const CIUDAD_EXPEDICION = "Barranca de Upia, Meta";
+/** Por decisión de la empresa, todos los certificados dicen contrato indefinido (sin importar la ficha). */
+export const TIPO_CONTRATO = "Indefinido";
 const FIRMA = ["CARLOS ENRIQUE MARTINEZ.", "GERENTE", "JAIRO MARTINEZ JMC SAS ZOMAC"];
 const PIE = ["OFICINA: CR3 10 61 CENTRO", "BARRANCA DE UPIA META", "MOVIL: 304 123 8054", "GMAIL: jairomartinezjmcsaszomac@gmail.com"];
 
@@ -180,7 +182,7 @@ export function CertificadoTemplate({ certificado, empresa }: CertificadoTemplat
             <T x={95.8} base={284.5}>Último Cargo:</T>
             <T x={290.9} base={284.5}>{cargoCertificado(c)}</T>
             <T x={95.8} base={314.3}>Tipo de Contrato:</T>
-            <T x={290.2} base={314.3}>{c.tipo_contrato}</T>
+            <T x={290.2} base={314.3}>{TIPO_CONTRATO}</T>
           </>
         ) : (
           <Text style={[s.parrafo, { top: desdeBase(194) }]}>No fue posible leer el contenido de este certificado.</Text>
