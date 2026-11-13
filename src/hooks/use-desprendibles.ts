@@ -3,7 +3,8 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { construirQuery, peticion } from "@/lib/api-cliente";
 import type { ListaPaginada } from "@/types/colaborador";
-import type { Desprendible, DesprendibleInput, FiltrosDesprendibles } from "@/types/desprendible";
+import type { FormatoNomina, PaginaClasificada } from "@/lib/lector/tipos";
+import type { ContenidoDesprendible, Desprendible, DesprendibleInput, FiltrosDesprendibles } from "@/types/desprendible";
 
 export const clavesDesprendibles = {
   todos: ["desprendibles"] as const,
@@ -64,6 +65,33 @@ export function useSubirDesprendible() {
   return useMutation({
     mutationFn: ({ datos, archivo }: { datos: DesprendibleInput; archivo: File }) =>
       peticion<Desprendible>("/api/desprendibles", { method: "POST", body: aFormulario(datos, archivo) }),
+    onSuccess: () => invalidar(queryClient),
+  });
+}
+
+export interface ResultadoLector {
+  archivo: string;
+  periodos: string[];
+  paginas: PaginaClasificada[];
+}
+
+/** Lee el PDF del programa de nómina: no guarda nada, solo dice a quién corresponde cada página. */
+export function useLeerNomina() {
+  return useMutation({
+    mutationFn: (archivo: File) => {
+      const formulario = new FormData();
+      formulario.append("archivo", archivo);
+      return peticion<ResultadoLector>("/api/desprendibles/lector", { method: "POST", body: formulario });
+    },
+  });
+}
+
+/** Genera con la plantilla JMC el desprendible de una página leída y lo guarda en la ficha. */
+export function useGenerarDesprendible() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (datos: { colaboradorId: string; formato: FormatoNomina; contenido: ContenidoDesprendible }) =>
+      peticion<Desprendible>("/api/desprendibles/lector/generar", { method: "POST", body: JSON.stringify(datos) }),
     onSuccess: () => invalidar(queryClient),
   });
 }

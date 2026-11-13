@@ -52,9 +52,10 @@ describe("calcularResumenAdmin", () => {
 
     expect(colaboradores).toMatchObject({ total: 5, activos: 4 });
     expect(desprendibles).toMatchObject({ cargados: 1, esperados: 4 });
+    // Administrativa y Operativa comparten plantilla (Ana, Caro y el admin); Campo tiene la suya (Beto)
     expect(desprendibles.porPlantilla).toEqual({
-      administrativo: { esperados: 2, cargados: 1 },
-      colaborador: { esperados: 2, cargados: 0 },
+      administrativo: { esperados: 3, cargados: 1 },
+      colaborador: { esperados: 1, cargados: 0 },
     });
   });
 

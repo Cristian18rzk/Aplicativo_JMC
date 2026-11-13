@@ -10,25 +10,25 @@ export type TipoPeriodo = (typeof TIPOS_PERIODO)[number];
 // ─── Plantillas ───────────────────────────────────────────────────────
 
 /**
- * Los desprendibles del personal administrativo y los de los colaboradores de campo son distintos:
- * cada grupo tiene su propia plantilla. La plantilla se decide por el área de la ficha.
+ * Administrativos y operadores comparten plantilla (nóminas 220 y 221 del programa de nómina); los
+ * colaboradores de campo tienen la suya. La plantilla se decide por el área de la ficha.
  */
 export const PLANTILLAS_DESPRENDIBLE = ["administrativo", "colaborador"] as const;
 export type PlantillaDesprendible = (typeof PLANTILLAS_DESPRENDIBLE)[number];
 
 export const NOMBRES_PLANTILLA: Record<PlantillaDesprendible, string> = {
-  administrativo: "Administrativos",
-  colaborador: "Colaboradores",
+  administrativo: "Administrativos y operadores",
+  colaborador: "Colaboradores de campo",
 };
 
 export const DESCRIPCION_PLANTILLA: Record<PlantillaDesprendible, string> = {
-  administrativo: "Personal del área Administrativa",
-  colaborador: "Personal de las áreas Campo y Operativa",
+  administrativo: "Personal de las áreas Administrativa y Operativa",
+  colaborador: "Personal del área Campo",
 };
 
-/** Área "Administrativa" → plantilla administrativa; "Campo" y "Operativa" → plantilla de colaboradores. */
+/** "Administrativa" y "Operativa" → plantilla administrativa; "Campo" → plantilla de colaboradores. */
 export function plantillaSegunArea(area: Area | string): PlantillaDesprendible {
-  return area === "Administrativa" ? "administrativo" : "colaborador";
+  return area === "Administrativa" || area === "Operativa" ? "administrativo" : "colaborador";
 }
 
 /** Línea de devengado o deducción, tal como aparece en el desprendible del programa de nómina. */
@@ -36,11 +36,38 @@ export interface ConceptoNomina {
   concepto: string;
   /** Días, horas o unidades (opcional): "15 d", "8 h", "120 kg". */
   cantidad?: string;
+  /** Valor unitario (columna "V/r. Unitario" del programa de nómina). */
+  valorUnitario?: number;
+  /** Tercero del concepto: fondo de pensión o EPS ("PORVENIR S.A. AFPC", "NUEVA EPS"). */
+  entidad?: string;
   valor: number;
 }
 
 /**
- * Contenido de un desprendible para dibujarlo con la plantilla JMC. Lo llenará el lector del PDF del
+ * Una fila del detalle de labores del desprendible de campo. Los valores se guardan como texto, tal
+ * como los imprime el programa de nómina ("35,48", "130.197,6"), para mostrarlos sin alterarlos.
+ */
+export interface LaborCampo {
+  labor: string;
+  semana: string;
+  bloque: string;
+  /** Peso promedio del racimo. */
+  ppr: string;
+  valorUnitario: string;
+  cantidad: string;
+  jornales: string;
+  inasistencia: string;
+  valorTotal: string;
+  promDominical: string;
+  festivo: string;
+  unidad: string;
+  valorRacimo: string;
+  secuencia: string;
+  total: string;
+}
+
+/**
+ * Contenido de un desprendible para dibujarlo con la plantilla JMC. Lo llena el lector del PDF del
  * programa de nómina; ambas plantillas reciben la misma estructura y deciden qué mostrar y cómo.
  */
 export interface ContenidoDesprendible {
@@ -50,9 +77,14 @@ export interface ContenidoDesprendible {
   fechaInicio?: string;
   fechaFin?: string;
   fechaPago?: string;
+  /** Número de la nómina en el programa de nómina ("220"). */
+  numeroNomina?: string;
+  /** Fecha en que se emitió el desprendible (pie de página). Si falta, se usa la de hoy. */
+  fechaEmision?: string;
   colaborador: {
     nombre: string;
-    tipo_documento: TipoDocumento;
+    /** Como lo trae la nómina: "CC", "NIT"… */
+    tipo_documento: TipoDocumento | string;
     documento: string;
     cargo: string;
     area: Area | string;
@@ -63,6 +95,14 @@ export interface ContenidoDesprendible {
   };
   devengados: ConceptoNomina[];
   deducciones: ConceptoNomina[];
+  /** Detalle de labores (solo el desprendible de campo). */
+  labores?: LaborCampo[];
+  /** Suma de la columna TOTAL de las labores, tal como la imprime el programa de nómina. */
+  totalLabores?: string;
+  /** Texto del neto en el desprendible de campo: "NETO A PAGAR 30 OCTUBRE". */
+  etiquetaNeto?: string;
+  /** Cuenta bancaria como la imprime el programa de nómina ("(en blanco)" si no tiene). */
+  cuenta?: string;
   totalDevengado: number;
   totalDeducciones: number;
   neto: number;

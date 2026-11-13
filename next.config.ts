@@ -17,8 +17,8 @@ const encabezadosSeguridad = [
 ];
 
 const nextConfig: NextConfig = {
-  // @react-pdf/renderer se ejecuta en Node (route handlers) y no debe empaquetarse
-  serverExternalPackages: ["@react-pdf/renderer", "nodemailer"],
+  // @react-pdf/renderer y unpdf (lector de PDF) se ejecutan en Node (route handlers) y no deben empaquetarse
+  serverExternalPackages: ["@react-pdf/renderer", "nodemailer", "unpdf"],
   poweredByHeader: false,
   turbopack: {
     rules: {

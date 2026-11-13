@@ -18,19 +18,19 @@ const DETALLE: Record<PlantillaDesprendible, { icono: LucideIcon; rasgos: string
   administrativo: {
     icono: Briefcase,
     rasgos: [
-      "Formato formal y compacto",
-      "Salario básico y días liquidados",
-      "Devengados y deducciones lado a lado",
-      "Firmas de la empresa y del empleado",
+      "Igual al comprobante del programa de nómina (nóminas 220 y 221)",
+      "Número de nómina, periodo, cargo y sueldo básico",
+      "Una tabla con cantidad, valor unitario, devengado y deducido",
+      "Total, neto pagado y firma del empleado",
     ],
   },
   colaborador: {
     icono: Sprout,
     rasgos: [
-      "Letra grande, fácil de leer impreso",
-      "El valor a recibir destacado arriba",
-      "Días trabajados, labor y zona",
-      "\"Lo que ganaste\" y \"Descuentos\" en una sola columna",
+      "Igual al desprendible de campo del programa de nómina",
+      "Hoja horizontal, en negro, con las líneas punteadas del original",
+      "Descripción, devengo, deducción, total y neto a pagar",
+      "Tabla completa de labores con su total",
     ],
   },
 };
@@ -49,9 +49,9 @@ export default function PaginaPlantillas() {
       </Link>
 
       <p className="max-w-3xl text-sm text-texto-suave">
-        Los desprendibles del personal administrativo y los de los colaboradores de campo usan plantillas distintas. A
-        cada trabajador le corresponde una según el <span className="font-medium text-texto">área</span> de su ficha. Las
-        vistas previas usan datos de ejemplo; el diseño definitivo de cada una se ajustará más adelante.
+        Administrativos y operadores comparten plantilla; los colaboradores de campo tienen la suya. A cada trabajador le
+        corresponde una según el <span className="font-medium text-texto">área</span> de su ficha (Administrativa y
+        Operativa, o Campo). Las vistas previas usan datos de ejemplo.
       </p>
 
       <div className="grid gap-4 md:grid-cols-2">
