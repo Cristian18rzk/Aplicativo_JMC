@@ -132,15 +132,17 @@ export async function primero(tabla: TablaAuth, filterByFormula: string): Promis
   return registro ?? null;
 }
 
-/** Obtiene un registro por ID; devuelve null si no existe. */
+/**
+ * Obtiene un registro por ID; devuelve null si no existe o si es de otra tabla.
+ *
+ * Se busca dentro de la tabla con RECORD_ID() en lugar de pedir `tabla/id` porque Airtable:
+ * - responde 403 INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND (no 404) cuando el registro no existe
+ *   (p. ej. un refresh token ya borrado en la cookie), y
+ * - entrega el registro aunque el ID sea de OTRA tabla de la base.
+ */
 export async function obtener(tabla: TablaAuth, id: string): Promise<RegistroRest | null> {
   if (!/^rec[a-zA-Z0-9]{14}$/.test(id)) return null;
-  try {
-    return await solicitar<RegistroRest>(`${rutaTabla(tabla)}/${id}`);
-  } catch (error) {
-    if (error instanceof ErrorAirtable && error.statusCode === 404) return null;
-    throw error;
-  }
+  return primero(tabla, `RECORD_ID() = "${id}"`);
 }
 
 export async function crear(tabla: TablaAuth, fields: CamposAirtable): Promise<RegistroRest> {
