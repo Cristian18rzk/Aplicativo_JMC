@@ -22,6 +22,7 @@ function mapearColaborador(registro: RegistroAirtable): Colaborador {
     id: registro.id,
     tipo_documento: (leerTexto(c, "tipo_documento") || "CC") as TipoDocumento,
     cedula: leerTexto(c, "cedula"),
+    lugar_expedicion: leerTexto(c, "lugar_expedicion"),
     nombres: leerTexto(c, "nombres"),
     apellidos: leerTexto(c, "apellidos"),
     cargo: leerTexto(c, "cargo"),

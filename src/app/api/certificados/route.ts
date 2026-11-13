@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
       colaborador: {
         tipo_documento: colaborador.tipo_documento,
         cedula: colaborador.cedula,
+        lugar_expedicion: colaborador.lugar_expedicion,
         nombres: colaborador.nombres,
         apellidos: colaborador.apellidos,
         cargo: colaborador.cargo,

@@ -13,6 +13,11 @@ export const colaboradorBaseSchema = z.object({
   // Datos personales
   tipo_documento: z.enum(TIPOS_DOCUMENTO, { error: "Seleccione un tipo de documento válido" }),
   cedula: cedulaSchema,
+  lugar_expedicion: z
+    .string()
+    .trim()
+    .max(80, { error: "El lugar de expedición no puede superar 80 caracteres" })
+    .default(""),
   nombres: textoObligatorio("Nombres"),
   apellidos: textoObligatorio("Apellidos"),
   email: z

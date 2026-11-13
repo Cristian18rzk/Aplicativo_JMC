@@ -47,6 +47,7 @@ export function crearColaborador(cambios: Partial<Colaborador> = {}): Colaborado
     id: IDS.colaborador,
     tipo_documento: "CC",
     cedula: "1098765432",
+    lugar_expedicion: "Villavicencio - Meta",
     nombres: "Persona",
     apellidos: "De Prueba",
     cargo: "Auxiliar",

@@ -25,6 +25,7 @@ type ErroresFormulario = Partial<Record<keyof ColaboradorInput, string>>;
 const VALORES_VACIOS: ValoresFormulario = {
   tipo_documento: "CC",
   cedula: "",
+  lugar_expedicion: "",
   nombres: "",
   apellidos: "",
   email: "",
@@ -42,6 +43,7 @@ function aValoresFormulario(c: Colaborador | null | undefined): ValoresFormulari
   return {
     tipo_documento: c.tipo_documento,
     cedula: c.cedula,
+    lugar_expedicion: c.lugar_expedicion,
     nombres: c.nombres,
     apellidos: c.apellidos,
     email: c.email,
@@ -160,6 +162,13 @@ export function ColaboradorForm({
           maxLength={15}
           ayuda="Con este número ingresa al aplicativo"
           {...campo("cedula")}
+        />
+        <Input
+          label="Lugar de expedición"
+          autoComplete="off"
+          placeholder="Ej.: Canalete - Córdoba"
+          ayuda="Aparece en el certificado laboral"
+          {...campo("lugar_expedicion")}
         />
         <Input label="Nombres" required autoComplete="off" {...campo("nombres")} />
         <Input label="Apellidos" required autoComplete="off" {...campo("apellidos")} />

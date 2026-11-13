@@ -32,6 +32,8 @@ export interface Colaborador {
   tipo_documento: TipoDocumento;
   /** Número del documento (cédula, PPT, CE o TI). */
   cedula: string;
+  /** Ciudad donde se expidió el documento ("Canalete - Córdoba"); aparece en el certificado laboral. */
+  lugar_expedicion: string;
   nombres: string;
   apellidos: string;
   cargo: string;

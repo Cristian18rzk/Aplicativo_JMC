@@ -11,6 +11,7 @@ export interface ContenidoCertificado {
     Colaborador,
     | "tipo_documento"
     | "cedula"
+    | "lugar_expedicion"
     | "nombres"
     | "apellidos"
     | "cargo"
