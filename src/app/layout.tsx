@@ -30,13 +30,41 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
+/** Dominio público del sitio: las redes y WhatsApp necesitan la URL absoluta de la portada. */
+function urlDelSitio(): URL {
+  const url = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "");
+  try {
+    return new URL(url || "http://localhost:3000");
+  } catch {
+    return new URL("http://localhost:3000");
+  }
+}
+
+const DESCRIPCION = "Consulta tus desprendibles de pago y certificados laborales de JMC S.A.S.";
+
 export const metadata: Metadata = {
+  metadataBase: urlDelSitio(),
   title: {
     default: "Aplicativo JMC — Nómina",
     template: "%s | Aplicativo JMC",
   },
-  description: "Gestión de colaboradores, desprendibles de pago y certificados laborales.",
+  description: DESCRIPCION,
   robots: { index: false, follow: false },
+  // Vista previa al compartir el link (WhatsApp, Facebook, Telegram…). La imagen es
+  // src/app/opengraph-image.jpg: Next.js agrega og:image con su tamaño y texto alternativo.
+  // Es un archivo .jpg para que proxy.ts no la redirija al login (el robot que la descarga no tiene sesión).
+  openGraph: {
+    type: "website",
+    locale: "es_CO",
+    siteName: "Aplicativo JMC",
+    title: "Aplicativo JMC",
+    description: DESCRIPCION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Aplicativo JMC",
+    description: DESCRIPCION,
+  },
 };
 
 export const viewport: Viewport = {
