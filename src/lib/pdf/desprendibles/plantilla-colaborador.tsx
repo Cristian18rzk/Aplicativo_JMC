@@ -24,30 +24,52 @@ const s = StyleSheet.create({
 
 // ─── Medidas del original ─────────────────────────────────────────────
 
-/** Bordes de las 15 columnas de la tabla de labores. */
-const X_COLUMNAS = [59.5, 169.8, 198.1, 240.1, 272.1, 319.1, 367.0, 410.6, 442.5, 491.8, 535.4, 579.0, 638.5, 670.4, 722.6, 769.7];
-
-const COLUMNAS: { campo: keyof LaborCampo; titulo: string; alinear: "izquierda" | "derecha" | "auto"; siempreConBorde: boolean }[] = [
-  { campo: "labor", titulo: "LABOR", alinear: "izquierda", siempreConBorde: true },
-  { campo: "semana", titulo: "SEMA\nNA", alinear: "derecha", siempreConBorde: true },
-  { campo: "bloque", titulo: "BLOQUE", alinear: "auto", siempreConBorde: true },
-  { campo: "ppr", titulo: "P.P.R.", alinear: "derecha", siempreConBorde: true },
-  { campo: "valorUnitario", titulo: "VALOR\nUNITARIO", alinear: "derecha", siempreConBorde: true },
-  { campo: "cantidad", titulo: "CANTIDAD", alinear: "derecha", siempreConBorde: true },
-  { campo: "jornales", titulo: "JORNALES", alinear: "derecha", siempreConBorde: true },
-  { campo: "inasistencia", titulo: "INASIST\nENCIA", alinear: "derecha", siempreConBorde: true },
-  { campo: "valorTotal", titulo: "VR. TOTAL", alinear: "derecha", siempreConBorde: true },
+const COLUMNAS: {
+  campo: keyof LaborCampo;
+  titulo: string;
+  /** Ancho de la columna en pt (calculado para que títulos y valores habituales quepan sin invadir la vecina). */
+  ancho: number;
+  alinear: "izquierda" | "derecha" | "auto";
+  siempreConBorde: boolean;
+}[] = [
+  // LABOR se queda con el espacio sobrante; si aun así no cabe, el texto salta de línea dentro de la celda
+  { campo: "labor", titulo: "LABOR", ancho: 0, alinear: "izquierda", siempreConBorde: true },
+  { campo: "semana", titulo: "SEMA\nNA", ancho: 26, alinear: "derecha", siempreConBorde: true },
+  { campo: "bloque", titulo: "BLOQUE", ancho: 36, alinear: "auto", siempreConBorde: true },
+  { campo: "ppr", titulo: "P.P.R.", ancho: 28, alinear: "derecha", siempreConBorde: true },
+  { campo: "valorUnitario", titulo: "VALOR\nUNITARIO", ancho: 40, alinear: "derecha", siempreConBorde: true },
+  { campo: "cantidad", titulo: "CANTIDAD", ancho: 42, alinear: "derecha", siempreConBorde: true },
+  { campo: "jornales", titulo: "JORNALES", ancho: 43, alinear: "derecha", siempreConBorde: true },
+  { campo: "inasistencia", titulo: "INASIST\nENCIA", ancho: 32, alinear: "derecha", siempreConBorde: true },
+  { campo: "valorTotal", titulo: "VR. TOTAL", ancho: 44, alinear: "derecha", siempreConBorde: true },
   // En el original estas tres columnas solo tienen borde en las celdas con valor
-  { campo: "promDominical", titulo: "PROM/DOM\nINIC.", alinear: "derecha", siempreConBorde: false },
-  { campo: "festivo", titulo: "$ FESTIVO", alinear: "derecha", siempreConBorde: false },
-  { campo: "unidad", titulo: "UNIDAD\nMEDIDA", alinear: "izquierda", siempreConBorde: true },
-  { campo: "valorRacimo", titulo: "$\nRACIMO", alinear: "derecha", siempreConBorde: true },
-  { campo: "secuencia", titulo: "SECUENCIA", alinear: "derecha", siempreConBorde: false },
-  { campo: "total", titulo: "TOTAL", alinear: "derecha", siempreConBorde: true },
+  { campo: "promDominical", titulo: "PROM/DOM\nINIC.", ancho: 47, alinear: "derecha", siempreConBorde: false },
+  { campo: "festivo", titulo: "$ FESTIVO", ancho: 42, alinear: "derecha", siempreConBorde: false },
+  { campo: "unidad", titulo: "UNIDAD\nMEDIDA", ancho: 35, alinear: "izquierda", siempreConBorde: true },
+  { campo: "valorRacimo", titulo: "$\nRACIMO", ancho: 34, alinear: "derecha", siempreConBorde: true },
+  { campo: "secuencia", titulo: "SECUENCIA", ancho: 46, alinear: "derecha", siempreConBorde: false },
+  { campo: "total", titulo: "TOTAL", ancho: 46, alinear: "derecha", siempreConBorde: true },
 ];
+
+/** Bordes izquierdo y derecho de la tabla (los mismos del original). */
+const X_TABLA_INICIO = 59.5;
+const X_TABLA_FIN = 769.7;
+
+/** Bordes de las 15 columnas de la tabla de labores. */
+const X_COLUMNAS = (() => {
+  const fijas = COLUMNAS.reduce((suma, col) => suma + col.ancho, 0);
+  const anchoLabor = X_TABLA_FIN - X_TABLA_INICIO - fijas;
+  const bordes = [X_TABLA_INICIO];
+  for (const col of COLUMNAS) bordes.push(bordes[bordes.length - 1] + (col.campo === "labor" ? anchoLabor : col.ancho));
+  return bordes;
+})();
 
 const ALTO_ENCABEZADO_TABLA = 28.44;
 const ALTO_FILA = 9.72;
+/** Alto que suma cada línea adicional cuando el texto de una celda no cabe en una sola. */
+const ALTO_LINEA_EXTRA = 8.2;
+/** Margen interno de las celdas a cada lado. */
+const RELLENO_CELDA = 1.5;
 const LINEA_V = 0.8;
 const LINEA_H = 0.84;
 /** Inicio de la tabla en la primera hoja y en las siguientes. */
@@ -112,6 +134,60 @@ function LineaPunteada({ y }: { y: number }) {
 
 const esNumerico = (texto: string) => /^[\d.,]+$/.test(texto);
 
+// ─── Medición de texto ────────────────────────────────────────────────
+
+/** Anchos de Helvetica (unidades por 1000 de em) para los caracteres ASCII 32–126. */
+const ANCHOS_HELVETICA = [
+  278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556, 556, 556, 556,
+  556, 556, 556, 278, 278, 584, 584, 584, 556, 1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833,
+  722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278, 278, 278, 469, 556, 333, 556, 556, 500, 556,
+  556, 278, 556, 556, 222, 222, 500, 222, 833, 556, 556, 556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334,
+  260, 334, 584,
+];
+
+/** Ancho aproximado (pt) de un texto en Helvetica a TAM pt. Las tildes se miden como su letra base. */
+function anchoTexto(texto: string): number {
+  let unidades = 0;
+  for (const caracter of texto.normalize("NFD").replace(/[̀-ͯ]/g, "")) {
+    const codigo = caracter.charCodeAt(0);
+    unidades += codigo >= 32 && codigo <= 126 ? ANCHOS_HELVETICA[codigo - 32] : 556;
+  }
+  return (unidades / 1000) * TAM;
+}
+
+/** Parte un texto en líneas que quepan en `ancho` (por palabras; una palabra demasiado larga se corta). */
+function partirEnLineas(texto: string, ancho: number): string[] {
+  const lineas: string[] = [];
+  let actual = "";
+  for (const palabra of texto.split(/\s+/).filter(Boolean)) {
+    const candidata = actual ? `${actual} ${palabra}` : palabra;
+    if (anchoTexto(candidata) <= ancho) {
+      actual = candidata;
+      continue;
+    }
+    if (actual) lineas.push(actual);
+    actual = "";
+    for (const caracter of palabra) {
+      if (actual && anchoTexto(actual + caracter) > ancho) {
+        lineas.push(actual);
+        actual = "";
+      }
+      actual += caracter;
+    }
+  }
+  if (actual) lineas.push(actual);
+  return lineas.length ? lineas : [""];
+}
+
+const anchoUtil = (columna: number) => X_COLUMNAS[columna + 1] - X_COLUMNAS[columna] - 2 * RELLENO_CELDA;
+
+/** Líneas de cada celda de una labor y alto de la fila (crece si alguna celda necesita más de una línea). */
+function medirFila(labor: LaborCampo): { lineas: string[][]; alto: number } {
+  const lineas = COLUMNAS.map((col, i) => (labor[col.campo] ? partirEnLineas(labor[col.campo], anchoUtil(i)) : []));
+  const maximo = Math.max(1, ...lineas.map((l) => l.length));
+  return { lineas, alto: ALTO_FILA + (maximo - 1) * ALTO_LINEA_EXTRA };
+}
+
 /** Bordes de una celda: cuatro líneas (las compartidas con la vecina caen en el mismo lugar). */
 function BordesCelda({ columna, top, alto }: { columna: number; top: number; alto: number }) {
   const x0 = X_COLUMNAS[columna];
@@ -159,41 +235,45 @@ function TablaLabores({ labores, top, total }: { labores: LaborCampo[]; top: num
         );
       })}
 
-      {labores.map((labor, fila) => {
-        const topFila = topFilas + fila * ALTO_FILA;
-        const base = topFila + 7.7;
-        return (
-          <View key={fila}>
-            {COLUMNAS.map((col, i) => {
-              const valor = labor[col.campo];
-              const conBorde = col.siempreConBorde || Boolean(valor);
-              const derecha = col.alinear === "derecha" || (col.alinear === "auto" && esNumerico(valor));
-              return (
-                <View key={col.campo}>
-                  {conBorde ? <BordesCelda columna={i} top={topFila} alto={ALTO_FILA} /> : null}
-                  {valor ? (
-                    derecha ? (
-                      <T derecha={X_COLUMNAS[i + 1] - 0.8} base={base}>
-                        {valor}
-                      </T>
-                    ) : (
-                      <T x={X_COLUMNAS[i] + 1.5} base={base}>
-                        {valor}
-                      </T>
-                    )
-                  ) : null}
-                </View>
-              );
-            })}
-          </View>
-        );
-      })}
+      {(() => {
+        let topFila = topFilas;
+        return labores.map((labor, fila) => {
+          const { lineas, alto } = medirFila(labor);
+          const top = topFila;
+          topFila += alto;
+          return (
+            <View key={fila}>
+              {COLUMNAS.map((col, i) => {
+                const valor = labor[col.campo];
+                const conBorde = col.siempreConBorde || Boolean(valor);
+                const derecha = col.alinear === "derecha" || (col.alinear === "auto" && esNumerico(valor));
+                return (
+                  <View key={col.campo}>
+                    {conBorde ? <BordesCelda columna={i} top={top} alto={alto} /> : null}
+                    {lineas[i].map((linea, j) =>
+                      derecha ? (
+                        <T key={j} derecha={X_COLUMNAS[i + 1] - 0.8} base={top + 7.7 + j * ALTO_LINEA_EXTRA}>
+                          {linea}
+                        </T>
+                      ) : (
+                        <T key={j} x={X_COLUMNAS[i] + RELLENO_CELDA} base={top + 7.7 + j * ALTO_LINEA_EXTRA}>
+                          {linea}
+                        </T>
+                      ),
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          );
+        });
+      })()}
 
       {/* Suma de la columna TOTAL, en una casilla debajo de la última labor */}
       {total ? (
         <>
-          <BordesCelda columna={COLUMNAS.length - 1} top={topFilas + labores.length * ALTO_FILA} alto={ALTO_FILA} />
-          <T derecha={X_COLUMNAS[COLUMNAS.length] - 0.8} base={topFilas + labores.length * ALTO_FILA + 7.7}>
+          <BordesCelda columna={COLUMNAS.length - 1} top={topFilas + altoFilas(labores)} alto={ALTO_FILA} />
+          <T derecha={X_COLUMNAS[COLUMNAS.length] - 0.8} base={topFilas + altoFilas(labores) + 7.7}>
             {total}
           </T>
         </>
@@ -202,12 +282,24 @@ function TablaLabores({ labores, top, total }: { labores: LaborCampo[]; top: num
   );
 }
 
+const altoFilas = (labores: LaborCampo[]) => labores.reduce((suma, labor) => suma + medirFila(labor).alto, 0);
+
 /** Reparte las labores en hojas: la primera tiene el encabezado del desprendible; las demás, solo la tabla. */
 function repartirLabores(labores: LaborCampo[]): LaborCampo[][] {
-  const cabe = (top: number) => Math.floor((LIMITE_INFERIOR - top - ALTO_ENCABEZADO_TABLA) / ALTO_FILA) - 1;
-  const hojas: LaborCampo[][] = [labores.slice(0, cabe(TOP_TABLA))];
-  for (let i = cabe(TOP_TABLA); i < labores.length; i += cabe(TOP_TABLA_CONTINUACION)) {
-    hojas.push(labores.slice(i, i + cabe(TOP_TABLA_CONTINUACION)));
+  // Se reserva espacio para la casilla del total debajo de la última fila
+  const disponible = (top: number) => LIMITE_INFERIOR - top - ALTO_ENCABEZADO_TABLA - ALTO_FILA;
+  const hojas: LaborCampo[][] = [[]];
+  let libre = disponible(TOP_TABLA);
+  for (const labor of labores) {
+    const { alto } = medirFila(labor);
+    const hoja = hojas[hojas.length - 1];
+    if (alto > libre && hoja.length) {
+      hojas.push([labor]);
+      libre = disponible(TOP_TABLA_CONTINUACION) - alto;
+    } else {
+      hoja.push(labor);
+      libre -= alto;
+    }
   }
   return hojas;
 }
