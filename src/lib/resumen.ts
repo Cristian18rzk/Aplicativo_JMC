@@ -39,10 +39,20 @@ function lista(colaboradores: Colaborador[]): ListaPendientes {
   };
 }
 
+/**
+ * Periodo de nómina que sigue el panel. La nómina de un mes se carga en el mes siguiente (la de
+ * octubre llega en noviembre), así que no sirve el mes calendario: se toma el periodo más reciente
+ * que ya tiene desprendibles, pero nunca uno anterior al mes pasado. Así, si se deja de cargar,
+ * el panel muestra como pendiente la nómina del mes pasado en lugar de un mes viejo ya completo.
+ */
+function periodoDeNomina(mesActual: string, periodosCargados: string[]): string {
+  const mesPasado = periodosAnteriores(mesActual, 2)[0];
+  return periodosCargados.reduce((mayor, p) => (p > mayor ? p : mayor), mesPasado);
+}
+
 /** Indicadores del panel del administrador, calculados en una sola pasada sobre Airtable. */
 export async function calcularResumenAdmin(): Promise<ResumenAdmin> {
-  const hoy = hoyEnColombia();
-  const periodo = hoy.slice(0, 7);
+  const mesActual = hoyEnColombia().slice(0, 7);
 
   const [mapa, desprendibles, certificados, situaciones] = await Promise.all([
     colaboradoresDb.getMapa(),
@@ -50,6 +60,11 @@ export async function calcularResumenAdmin(): Promise<ResumenAdmin> {
     certificadosDb.getAll({ porPagina: TODOS }),
     situacionesDeAcceso(),
   ]);
+
+  const periodo = periodoDeNomina(
+    mesActual,
+    desprendibles.datos.map((d) => d.periodo).filter((p) => /^\d{4}-\d{2}$/.test(p)),
+  );
 
   const todos = [...mapa.values()];
   const activos = todos.filter((c) => c.estado === "Activo");
@@ -94,7 +109,8 @@ export async function calcularResumenAdmin(): Promise<ResumenAdmin> {
     },
     certificados: {
       total: certificados.total,
-      esteMes: certificados.datos.filter((c) => c.fecha_generacion.startsWith(periodo)).length,
+      // Los certificados sí se cuentan por mes calendario
+      esteMes: certificados.datos.filter((c) => c.fecha_generacion.startsWith(mesActual)).length,
     },
     pendientes: {
       sinDesprendible: lista(activos.filter((c) => !conDesprendible.has(c.id))),

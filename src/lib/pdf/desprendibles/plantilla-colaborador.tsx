@@ -203,8 +203,19 @@ function BordesCelda({ columna, top, alto }: { columna: number; top: number; alt
   );
 }
 
+/** Mide cada fila y calcula dónde empieza: cada una arranca donde termina la anterior. */
+function ubicarFilas(labores: LaborCampo[], topFilas: number) {
+  const filas: (ReturnType<typeof medirFila> & { top: number })[] = [];
+  for (const labor of labores) {
+    const anterior = filas[filas.length - 1];
+    filas.push({ ...medirFila(labor), top: anterior ? anterior.top + anterior.alto : topFilas });
+  }
+  const ultima = filas[filas.length - 1];
+  return { filas, fin: ultima ? ultima.top + ultima.alto : topFilas };
+}
+
 function TablaLabores({ labores, top, total }: { labores: LaborCampo[]; top: number; total?: string }) {
-  const topFilas = top + ALTO_ENCABEZADO_TABLA;
+  const { filas, fin } = ubicarFilas(labores, top + ALTO_ENCABEZADO_TABLA);
   return (
     <>
       {/* Encabezado: recuadro con divisiones y títulos en negrita centrados */}
@@ -236,45 +247,40 @@ function TablaLabores({ labores, top, total }: { labores: LaborCampo[]; top: num
         );
       })}
 
-      {(() => {
-        let topFila = topFilas;
-        return labores.map((labor, fila) => {
-          const { lineas, alto } = medirFila(labor);
-          const top = topFila;
-          topFila += alto;
-          return (
-            <View key={fila}>
-              {COLUMNAS.map((col, i) => {
-                const valor = labor[col.campo];
-                const conBorde = col.siempreConBorde || Boolean(valor);
-                const derecha = col.alinear === "derecha" || (col.alinear === "auto" && esNumerico(valor));
-                return (
-                  <View key={col.campo}>
-                    {conBorde ? <BordesCelda columna={i} top={top} alto={alto} /> : null}
-                    {lineas[i].map((linea, j) =>
-                      derecha ? (
-                        <T key={j} derecha={X_COLUMNAS[i + 1] - 0.8} base={top + 7.7 + j * ALTO_LINEA_EXTRA}>
-                          {linea}
-                        </T>
-                      ) : (
-                        <T key={j} x={X_COLUMNAS[i] + RELLENO_CELDA} base={top + 7.7 + j * ALTO_LINEA_EXTRA}>
-                          {linea}
-                        </T>
-                      ),
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          );
-        });
-      })()}
+      {labores.map((labor, fila) => {
+        const { lineas, alto, top: topFila } = filas[fila];
+        return (
+          <View key={fila}>
+            {COLUMNAS.map((col, i) => {
+              const valor = labor[col.campo];
+              const conBorde = col.siempreConBorde || Boolean(valor);
+              const derecha = col.alinear === "derecha" || (col.alinear === "auto" && esNumerico(valor));
+              return (
+                <View key={col.campo}>
+                  {conBorde ? <BordesCelda columna={i} top={topFila} alto={alto} /> : null}
+                  {lineas[i].map((linea, j) =>
+                    derecha ? (
+                      <T key={j} derecha={X_COLUMNAS[i + 1] - 0.8} base={topFila + 7.7 + j * ALTO_LINEA_EXTRA}>
+                        {linea}
+                      </T>
+                    ) : (
+                      <T key={j} x={X_COLUMNAS[i] + RELLENO_CELDA} base={topFila + 7.7 + j * ALTO_LINEA_EXTRA}>
+                        {linea}
+                      </T>
+                    ),
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        );
+      })}
 
       {/* Suma de la columna TOTAL, en una casilla debajo de la última labor */}
       {total ? (
         <>
-          <BordesCelda columna={COLUMNAS.length - 1} top={topFilas + altoFilas(labores)} alto={ALTO_FILA} />
-          <T derecha={X_COLUMNAS[COLUMNAS.length] - 0.8} base={topFilas + altoFilas(labores) + 7.7}>
+          <BordesCelda columna={COLUMNAS.length - 1} top={fin} alto={ALTO_FILA} />
+          <T derecha={X_COLUMNAS[COLUMNAS.length] - 0.8} base={fin + 7.7}>
             {total}
           </T>
         </>
@@ -282,8 +288,6 @@ function TablaLabores({ labores, top, total }: { labores: LaborCampo[]; top: num
     </>
   );
 }
-
-const altoFilas = (labores: LaborCampo[]) => labores.reduce((suma, labor) => suma + medirFila(labor).alto, 0);
 
 /** Reparte las labores en hojas: la primera tiene el encabezado del desprendible; las demás, solo la tabla. */
 function repartirLabores(labores: LaborCampo[]): LaborCampo[][] {

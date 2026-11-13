@@ -83,9 +83,43 @@ describe("calcularResumenAdmin", () => {
     expect((await calcularResumenAdmin()).certificados).toEqual({ total: 2, esteMes: 1 });
   });
 
+  it("en noviembre sigue la nómina de octubre si es la última cargada", async () => {
+    vi.mocked(desprendiblesDb.getAll).mockResolvedValue(
+      lista([
+        { colaboradorId: beto.id, periodo: "2026-10" },
+        { colaboradorId: caro.id, periodo: "2026-10" },
+      ]) as never,
+    );
+    const r = await calcularResumenAdmin();
+
+    expect(r.periodo).toBe("2026-10");
+    expect(r.desprendibles).toMatchObject({ cargados: 2, esperados: 4 });
+    expect(r.pendientes.sinDesprendible.personas.map((p) => p.nombre)).toEqual(["Persona De Prueba", "Ana Zapata"]);
+    expect(r.desprendibles.historial.at(-1)).toEqual({ periodo: "2026-10", cantidad: 2 });
+    // Los certificados siguen contándose por el mes calendario (noviembre)
+    expect(r.certificados.esteMes).toBe(1);
+  });
+
+  it("si la última nómina cargada es vieja, muestra pendiente la del mes pasado", async () => {
+    vi.mocked(desprendiblesDb.getAll).mockResolvedValue(lista([{ colaboradorId: beto.id, periodo: "2026-08" }]) as never);
+    const r = await calcularResumenAdmin();
+
+    expect(r.periodo).toBe("2026-10");
+    expect(r.desprendibles.cargados).toBe(0);
+  });
+
+  it("sin desprendibles cargados, el mes pasado se calcula con la fecha de Colombia", async () => {
+    // 30 de noviembre a las 23:30 en Colombia = 1 de diciembre en UTC
+    vi.setSystemTime(new Date("2026-12-01T04:30:00Z"));
+    vi.mocked(desprendiblesDb.getAll).mockResolvedValue(lista([]) as never);
+    expect((await calcularResumenAdmin()).periodo).toBe("2026-10");
+  });
+
   it("el año cambia bien al calcular el historial de enero", async () => {
     vi.setSystemTime(new Date("2027-01-15T15:00:00Z"));
-    const { historial } = (await calcularResumenAdmin()).desprendibles;
-    expect(historial[0].periodo).toBe("2026-08");
+    const r = await calcularResumenAdmin();
+    // En enero se sigue la nómina de diciembre del año anterior
+    expect(r.periodo).toBe("2026-12");
+    expect(r.desprendibles.historial[0].periodo).toBe("2026-07");
   });
 });
