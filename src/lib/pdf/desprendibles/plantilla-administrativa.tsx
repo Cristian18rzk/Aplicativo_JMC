@@ -2,7 +2,8 @@
  * Plantilla de desprendible de ADMINISTRATIVOS Y OPERADORES.
  * Réplica del comprobante del programa de nómina (nóminas 220 y 221): encabezado centrado con la
  * razón social, una sola tabla de conceptos (Cantidad, V/r. Unitario, Devengado, Deducido), totales,
- * neto pagado, firma del empleado y pie con la fecha de emisión y la página.
+ * neto pagado, firma del empleado y pie con la fecha de emisión y la página. Detrás del comprobante
+ * va el logo de la empresa como marca de agua tenue.
  *
  * Las posiciones están medidas sobre el PDF original (hoja carta, 612 × 792 pt) y se dibujan con
  * posición absoluta para que coincidan línea a línea.
@@ -10,7 +11,7 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { MESES, formatDate, formatNumber, parseFecha } from "@/lib/utils";
 import type { ConceptoNomina } from "@/types/desprendible";
-import type { PlantillaDesprendibleProps } from "./comun";
+import { MarcaDeAgua, type PlantillaDesprendibleProps } from "./comun";
 
 /** Estilo de un texto de react-pdf. */
 type Estilo = ReturnType<typeof StyleSheet.create>[string];
@@ -145,6 +146,9 @@ export function PlantillaAdministrativa({ contenido: c, empresa }: PlantillaDesp
       language="es"
     >
       <Page size="LETTER" style={s.pagina}>
+        {/* Marca de agua centrada en el comprobante (entre el encabezado y el pie), detrás del contenido */}
+        <MarcaDeAgua centroX={MARGEN_IZQ + ANCHO / 2} centroY={(20 + topPie) / 2} lado={Math.min(300, topPie - 40)} />
+
         {/* Encabezado */}
         <Linea y={20} x={MARGEN_IZQ} ancho={ANCHO} grosor={2} color={GRIS} />
         <TCentro y={30.5} tam={15.8} estilo={s.empresa}>

@@ -3,7 +3,8 @@
  * Réplica del desprendible de campo del programa de nómina: hoja A4 horizontal, Arial 7,2 pt en negro
  * (Helvetica tiene las mismas medidas), encabezado EMPRESA / DOCUMENTO / NOMBRE, líneas punteadas,
  * C.C. / DESCRIPCIÓN / DEVENGO / DEDUCCIÓN, cédula, total, neto a pagar y la tabla de labores con su
- * cuadrícula. Sin colores ni elementos añadidos.
+ * cuadrícula. Sin colores; lo único añadido es el logo de la empresa como marca de agua tenue en el
+ * centro de cada hoja.
  *
  * Las posiciones están medidas sobre el PDF original (pt, medidas desde arriba) y se dibujan con
  * posición absoluta. Si las labores no caben en la hoja, la tabla continúa en la siguiente.
@@ -11,7 +12,7 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { MESES, formatNumber } from "@/lib/utils";
 import type { ContenidoDesprendible, LaborCampo } from "@/types/desprendible";
-import type { PlantillaDesprendibleProps } from "./comun";
+import { MarcaDeAgua, type PlantillaDesprendibleProps } from "./comun";
 
 const TAM = 7.2;
 const NEGRO = "#000000";
@@ -386,6 +387,9 @@ export function PlantillaColaborador({ contenido: c, empresa }: PlantillaDespren
     >
       {hojas.map((labores, i) => (
         <Page key={i} size="A4" orientation="landscape" style={s.pagina}>
+          {/* Primero la marca de agua, para que quede detrás del texto y la tabla */}
+          {/* Centrada en la hoja (A4 horizontal: 842 × 595 pt) */}
+          <MarcaDeAgua centroX={421} centroY={297.5} lado={340} />
           {i === 0 ? <Encabezado c={c} empresa={empresa.nombre} /> : null}
           {labores.length ? (
             <TablaLabores

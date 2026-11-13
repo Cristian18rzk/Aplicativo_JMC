@@ -44,6 +44,31 @@ export function MarcaEmpresa({ empresa }: { empresa: DatosEmpresa }) {
   );
 }
 
+/** Opacidad de la marca de agua: muy tenue para no competir con el texto. */
+const OPACIDAD_MARCA_AGUA = 0.07;
+
+/**
+ * Logo de la empresa como marca de agua, centrado en (centroX, centroY) con diámetro `lado` (pt).
+ * Debe ir de primero dentro de la página para quedar detrás del contenido.
+ */
+export function MarcaDeAgua({ centroX, centroY, lado }: { centroX: number; centroY: number; lado: number }) {
+  return (
+    // eslint-disable-next-line jsx-a11y/alt-text -- Image de react-pdf no admite alt
+    <Image
+      src={LOGO_JMC_DATA_URI}
+      style={{
+        position: "absolute",
+        left: centroX - lado / 2,
+        top: centroY - lado / 2,
+        width: lado,
+        height: lado,
+        borderRadius: lado / 2,
+        opacity: OPACIDAD_MARCA_AGUA,
+      }}
+    />
+  );
+}
+
 /** Pie fijo con el código del documento. */
 export function PieDesprendible({ empresa, codigo }: { empresa: DatosEmpresa; codigo?: string }) {
   return (
